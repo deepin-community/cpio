@@ -6,11 +6,11 @@ Subject: manpages-see-also
  doc/cpio.1 | 2 ++
  1 file changed, 2 insertions(+)
 
-diff --git a/doc/cpio.1 b/doc/cpio.1
-index 65ba909..d9f68a6 100644
---- a/doc/cpio.1
-+++ b/doc/cpio.1
-@@ -97,6 +97,8 @@ GNU cpio home page: <http://www.gnu.org/software/cpio/>
+Index: cpio-2.14+dfsg/doc/cpio.1
+===================================================================
+--- cpio-2.14+dfsg.orig/doc/cpio.1
++++ cpio-2.14+dfsg/doc/cpio.1
+@@ -97,6 +97,8 @@ GNU cpio home page: <http://www.gnu.org/
  General help using GNU software: <http://www.gnu.org/gethelp/>
  .PP
  Report cpio translation bugs to <http://translationproject.org/team/>

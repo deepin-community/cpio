@@ -1,6 +1,5 @@
 /* mt -- control magnetic tape drive operation
-   Copyright (C) 1991-1992, 1995, 2001, 2007, 2010, 2014-2015, 2017 Free
-   Software Foundation, Inc.
+   Copyright (C) 1991-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -186,7 +185,7 @@ static struct argp_option options[] = {
 
 char *tapedev;                   /* tape device */
 char *rsh_command_option = NULL; /* rsh command */
-short operation;                 /* operation code */ 
+short operation;                 /* operation code */
 int count = 1;                   /* count */
 
 int argcnt = 0;                  /* number of command line arguments
@@ -232,7 +231,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 #endif
 	}
       break;
-      
+
     case 'f':
     case 't':
       tapedev = arg;
@@ -319,7 +318,7 @@ main (int argc, char **argv)
   setlocale (LC_ALL, "");
   bindtextdomain (PACKAGE, LOCALEDIR);
   textdomain (PACKAGE);
-  
+
   set_program_name (argv[0]);
   argp_version_setup ("mt", program_authors);
   argmatch_die = fatal_exit;
@@ -339,7 +338,7 @@ main (int argc, char **argv)
     default:
       tapedesc = rmtopen (tapedev, O_RDONLY, 0, rsh_command_option);
     }
-  
+
   if (tapedesc == -1)
     error (MT_EXIT_INVOP, errno, _("%s: rmtopen failed"), tapedev);
   check_type (tapedev, tapedesc);
@@ -358,4 +357,3 @@ main (int argc, char **argv)
 
   exit (MT_EXIT_SUCCESS);
 }
-

@@ -6,10 +6,10 @@ Subject: reporting-bugs
  doc/cpio.1 | 16 ++++++++++++++++
  1 file changed, 16 insertions(+)
 
-diff --git a/doc/cpio.1 b/doc/cpio.1
-index 3d3474b..65ba909 100644
---- a/doc/cpio.1
-+++ b/doc/cpio.1
+Index: cpio-2.14+dfsg/doc/cpio.1
+===================================================================
+--- cpio-2.14+dfsg.orig/doc/cpio.1
++++ cpio-2.14+dfsg/doc/cpio.1
 @@ -89,6 +89,14 @@ or find it in various formats online at
  If any discrepancies occur between this manpage and the
  \fBGNU Cpio Manual\fR, the later shall be considered the authoritative

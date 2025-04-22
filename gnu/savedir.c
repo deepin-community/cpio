@@ -1,11 +1,11 @@
 /* savedir.c -- save the list of files in a directory in a string
 
-   Copyright (C) 1990, 1997-2001, 2003-2006, 2009-2017 Free Software
+   Copyright (C) 1990, 1997-2001, 2003-2006, 2009-2024 Free Software
    Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -14,7 +14,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Written by David MacKenzie <djm@gnu.ai.mit.edu>. */
 
@@ -35,12 +35,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "attribute.h"
 #include "xalloc.h"
 
 typedef struct
 {
-  char *name;
+  /* Offset of file name in name_space.  */
+  idx_t name;
+
 #if D_INO_IN_DIRENT
+  /* File inode number.  */
   ino_t ino;
 #endif
 } direntry_t;
@@ -48,28 +52,29 @@ typedef struct
 /* Compare the names of two directory entries */
 
 static int
-direntry_cmp_name (void const *a, void const *b)
+direntry_cmp_name (void const *a, void const *b, void *arg)
 {
   direntry_t const *dea = a;
   direntry_t const *deb = b;
+  char const *name_space = arg;
 
-  return strcmp (dea->name, deb->name);
+  return strcmp (name_space + dea->name, name_space + deb->name);
 }
 
 #if D_INO_IN_DIRENT
 /* Compare the inode numbers of two directory entries */
 
 static int
-direntry_cmp_inode (void const *a, void const *b)
+direntry_cmp_inode (void const *a, void const *b, MAYBE_UNUSED void *arg)
 {
   direntry_t const *dea = a;
   direntry_t const *deb = b;
 
-  return dea->ino < deb->ino ? -1 : dea->ino > deb->ino;
+  return _GL_CMP (dea->ino, deb->ino);
 }
 #endif
 
-typedef int (*comparison_function) (void const *, void const *);
+typedef int (*comparison_function) (void const *, void const *, void *);
 
 static comparison_function const comparison_function_table[] =
   {
@@ -91,12 +96,11 @@ char *
 streamsavedir (DIR *dirp, enum savedir_option option)
 {
   char *name_space = NULL;
-  size_t allocated = 0;
+  idx_t allocated = 0;
   direntry_t *entries = NULL;
-  size_t entries_allocated = 0;
-  size_t entries_used = 0;
-  size_t used = 0;
-  int readdir_errno;
+  idx_t entries_allocated = 0;
+  idx_t entries_used = 0;
+  idx_t used = 0;
   comparison_function cmp = comparison_function_table[option];
 
   if (dirp == NULL)
@@ -117,66 +121,52 @@ streamsavedir (DIR *dirp, enum savedir_option option)
       entry = dp->d_name;
       if (entry[entry[0] != '.' ? 0 : entry[1] != '.' ? 1 : 2] != '\0')
         {
-          size_t entry_size = _D_EXACT_NAMLEN (dp) + 1;
+          idx_t entry_size = _D_EXACT_NAMLEN (dp) + 1;
+          if (allocated - used <= entry_size)
+            name_space = xpalloc (name_space, &allocated,
+                                  entry_size - (allocated - used),
+                                  IDX_MAX - 1, sizeof *name_space);
+          memcpy (name_space + used, entry, entry_size);
           if (cmp)
             {
               if (entries_allocated == entries_used)
-                {
-                  size_t n = entries_allocated;
-                  entries = x2nrealloc (entries, &n, sizeof *entries);
-                  entries_allocated = n;
-                }
-              entries[entries_used].name = xstrdup (entry);
+                entries = xpalloc (entries, &entries_allocated, 1, -1,
+                                   sizeof *entries);
+              entries[entries_used].name = used;
 #if D_INO_IN_DIRENT
               entries[entries_used].ino = dp->d_ino;
 #endif
               entries_used++;
             }
-          else
-            {
-              if (allocated - used <= entry_size)
-                {
-                  size_t n = used + entry_size;
-                  if (n < used)
-                    xalloc_die ();
-                  name_space = x2nrealloc (name_space, &n, 1);
-                  allocated = n;
-                }
-              memcpy (name_space + used, entry, entry_size);
-            }
           used += entry_size;
         }
     }
 
-  readdir_errno = errno;
-  if (readdir_errno != 0)
+  if (errno != 0)
     {
-      free (entries);
       free (name_space);
-      errno = readdir_errno;
-      return NULL;
+      name_space = NULL;
     }
-
-  if (cmp)
+  else if (cmp)
     {
-      size_t i;
-
       if (entries_used)
-        qsort (entries, entries_used, sizeof *entries, cmp);
-      name_space = xmalloc (used + 1);
-      used = 0;
-      for (i = 0; i < entries_used; i++)
-        {
-          char *dest = name_space + used;
-          used += stpcpy (dest, entries[i].name) - dest + 1;
-          free (entries[i].name);
-        }
-      free (entries);
+        qsort_r (entries, entries_used, sizeof *entries, cmp, name_space);
+      char *sorted_name_space = ximalloc (used + 1);
+      char *p = sorted_name_space;
+      for (idx_t i = 0; i < entries_used; i++)
+        p = stpcpy (p, name_space + entries[i].name) + 1;
+      *p = '\0';
+      free (name_space);
+      name_space = sorted_name_space;
     }
-  else if (used == allocated)
-    name_space = xrealloc (name_space, used + 1);
+  else
+    {
+      if (used == allocated)
+        name_space = xirealloc (name_space, used + 1);
+      name_space[used] = '\0';
+    }
 
-  name_space[used] = '\0';
+  free (entries);
   return name_space;
 }
 
@@ -196,9 +186,7 @@ savedir (char const *dir, enum savedir_option option)
       char *name_space = streamsavedir (dirp, option);
       if (closedir (dirp) != 0)
         {
-          int closedir_errno = errno;
           free (name_space);
-          errno = closedir_errno;
           return NULL;
         }
       return name_space;

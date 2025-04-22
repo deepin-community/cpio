@@ -1,6 +1,5 @@
 /* copyin.c - extract or list a cpio archive
-   Copyright (C) 1990-1992, 2001-2007, 2009-2010, 2014-2015, 2017 Free
-   Software Foundation, Inc.
+   Copyright (C) 1990-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -31,10 +30,12 @@
 #ifndef	FNM_PATHNAME
 # include <fnmatch.h>
 #endif
+#include <hash.h>
 
 #ifndef HAVE_LCHOWN
 # define lchown(f,u,g) 0
 #endif
+#include <timespec.h>
 
 static void copyin_regular_file(struct cpio_file_stat* file_hdr,
 				int in_file_des);
@@ -55,11 +56,12 @@ query_rename(struct cpio_file_stat* file_hdr, FILE *tty_in, FILE *tty_out,
   char *str_res;		/* Result for string function.  */
   static dynamic_string new_name;	/* New file name for rename option.  */
   static int initialized_new_name = false;
+
   if (!initialized_new_name)
-  {
-    ds_init (&new_name, 128);
-    initialized_new_name = true;
-  }
+    {
+      ds_init (&new_name);
+      initialized_new_name = true;
+    }
 
   if (rename_flag)
     {
@@ -108,7 +110,7 @@ static char *
 get_link_name (struct cpio_file_stat *file_hdr, int in_file_des)
 {
   char *link_name;
-  
+
   if (file_hdr->c_filesize < 0 || file_hdr->c_filesize > SIZE_MAX-1)
     {
       error (0, 0, _("%s: stored filename length is out of range"),
@@ -203,7 +205,7 @@ try_existing_file (struct cpio_file_stat* file_hdr, int in_file_des,
 	  tape_skip_padding (in_file_des, file_hdr->c_filesize);
 	  return -1;	/* Go to the next file.  */
 	}
-      else if (S_ISDIR (file_stat.st_mode) 
+      else if (S_ISDIR (file_stat.st_mode)
 		? rmdir (file_hdr->c_name)
 		: unlink (file_hdr->c_name))
 	{
@@ -217,10 +219,10 @@ try_existing_file (struct cpio_file_stat* file_hdr, int in_file_des,
   return 0;
 }
 
-/* The newc and crc formats store multiply linked copies of the same file 
-   in the archive only once.  The actual data is attached to the last link 
-   in the archive, and the other links all have a filesize of 0.  When a 
-   file in the archive has multiple links and a filesize of 0, its data is 
+/* The newc and crc formats store multiply linked copies of the same file
+   in the archive only once.  The actual data is attached to the last link
+   in the archive, and the other links all have a filesize of 0.  When a
+   file in the archive has multiple links and a filesize of 0, its data is
    probably "attatched" to another file in the archive, so we can't create
    it right away.  We have to "defer" creating it until we have created
    the file that has the data "attatched" to it.  We keep a list of the
@@ -251,9 +253,9 @@ create_defered_links (struct cpio_file_stat *file_hdr)
   struct deferment *d;
   struct deferment *d_prev;
   ino_t	ino;
-  int 	maj;
+  int	maj;
   int   min;
-  int 	link_res;
+  int	link_res;
   ino = file_hdr->c_ino;
   maj = file_hdr->c_dev_maj;
   min = file_hdr->c_dev_min;
@@ -299,12 +301,12 @@ create_defered_links_to_skipped (struct cpio_file_stat *file_hdr,
   struct deferment *d;
   struct deferment *d_prev;
   ino_t	ino;
-  int 	maj;
+  int	maj;
   int   min;
   if (file_hdr->c_filesize == 0)
     {
       /* The file doesn't have any data attached to it so we don't have
-         to bother.  */
+	 to bother.  */
       return -1;
     }
   ino = file_hdr->c_ino;
@@ -342,7 +344,7 @@ create_defered_links_to_skipped (struct cpio_file_stat *file_hdr,
    empty links that are still on the deferments list.  */
 
 static void
-create_final_defers ()
+create_final_defers (void)
 {
   struct deferment *d;
   int	link_res;
@@ -351,12 +353,12 @@ create_final_defers ()
   for (d = deferments; d != NULL; d = d->next)
     {
       /* Debian hack: A line, which could cause an endless loop, was
-         removed (97/1/2).  It was reported by Ronald F. Guilmette to
-         the upstream maintainers. -BEM */
+	 removed (97/1/2).  It was reported by Ronald F. Guilmette to
+	 the upstream maintainers. -BEM */
       /* Debian hack:  This was reported by Horst Knobloch. This bug has
-         been reported to "bug-gnu-utils@prep.ai.mit.edu". (99/1/6) -BEM
-         */
-      link_res = link_to_maj_min_ino (d->header.c_name, 
+	 been reported to "bug-gnu-utils@prep.ai.mit.edu". (99/1/6) -BEM
+	 */
+      link_res = link_to_maj_min_ino (d->header.c_name,
 		    d->header.c_dev_maj, d->header.c_dev_min,
 		    d->header.c_ino);
       if (link_res == 0)
@@ -428,7 +430,7 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
 	     the archive was created and later appeneded to). */
 	  /* Debian hack: (97/1/2) This was reported by Ronald
 	     F. Guilmette to the upstream maintainers. -BEM */
-	  link_res = link_to_maj_min_ino (file_hdr->c_name, 
+	  link_res = link_to_maj_min_ino (file_hdr->c_name,
 		    file_hdr->c_dev_maj, file_hdr->c_dev_min,
 					  file_hdr->c_ino);
 	  if (link_res == 0)
@@ -445,7 +447,7 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
 	  int link_res;
 	  /* Debian hack: (97/1/2) This was reported by Ronald
 	     F. Guilmette to the upstream maintainers. -BEM */
-	  link_res = link_to_maj_min_ino (file_hdr->c_name, 
+	  link_res = link_to_maj_min_ino (file_hdr->c_name,
 					  file_hdr->c_dev_maj,
 					  file_hdr->c_dev_min,
 					  file_hdr->c_ino);
@@ -469,11 +471,11 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
 	    }
 	  return;
 	}
-    
+
       /* If not linked, copy the contents of the file.  */
       out_file_des = open (file_hdr->c_name,
 			   O_CREAT | O_WRONLY | O_BINARY, 0600);
-  
+
       if (out_file_des < 0 && create_dir_flag)
 	{
 	  create_all_directories (file_hdr->c_name);
@@ -481,7 +483,7 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
 			       O_CREAT | O_WRONLY | O_BINARY,
 			       0600);
 	}
-      
+
       if (out_file_des < 0)
 	{
 	  open_error (file_hdr->c_name);
@@ -490,7 +492,7 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
 	  return;
 	}
     }
-  
+
   crc = 0;
   if (swap_halfwords_flag)
     {
@@ -510,7 +512,7 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
     }
   copy_files_tape_to_disk (in_file_des, out_file_des, file_hdr->c_filesize);
   disk_empty_output_buffer (out_file_des, true);
-  
+
   if (to_stdout_option)
     {
       if (archive_format == arf_crcascii)
@@ -522,7 +524,7 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
       tape_skip_padding (in_file_des, file_hdr->c_filesize);
       return;
     }
-      
+
   set_perms (out_file_des, file_hdr);
 
   if (close (out_file_des) < 0)
@@ -539,8 +541,8 @@ copyin_regular_file (struct cpio_file_stat* file_hdr, int in_file_des)
   if (file_hdr->c_nlink > 1
       && (archive_format == arf_newascii || archive_format == arf_crcascii) )
     {
-      /* (see comment above for how the newc and crc formats 
-	 store multiple links).  Now that we have the data 
+      /* (see comment above for how the newc and crc formats
+	 store multiple links).  Now that we have the data
 	 for this file, create any other links to it which
 	 we defered.  */
       create_defered_links (file_hdr);
@@ -562,7 +564,7 @@ copyin_device (struct cpio_file_stat* file_hdr)
       /* Debian hack:  This was reported by Horst
 	 Knobloch. This bug has been reported to
 	 "bug-gnu-utils@prep.ai.mit.edu". (99/1/6) -BEM */
-      link_res = link_to_maj_min_ino (file_hdr->c_name, 
+      link_res = link_to_maj_min_ino (file_hdr->c_name,
 		    file_hdr->c_dev_maj, file_hdr->c_dev_min,
 		    file_hdr->c_ino);
       if (link_res == 0)
@@ -571,7 +573,7 @@ copyin_device (struct cpio_file_stat* file_hdr)
 	}
     }
   else if (archive_format == arf_ustar &&
-	   file_hdr->c_tar_linkname && 
+	   file_hdr->c_tar_linkname &&
 	   file_hdr->c_tar_linkname [0] != '\0')
     {
       int	link_res;
@@ -590,7 +592,7 @@ copyin_device (struct cpio_file_stat* file_hdr)
 	}
       return;
     }
-  
+
   res = mknod (file_hdr->c_name, file_hdr->c_mode,
 	    makedev (file_hdr->c_rdev_maj, file_hdr->c_rdev_min));
   if (res < 0 && create_dir_flag)
@@ -610,14 +612,156 @@ copyin_device (struct cpio_file_stat* file_hdr)
       gid_t gid = set_group_flag ? set_group : file_hdr->c_gid;
       if ((chown (file_hdr->c_name, uid, gid) < 0)
 	  && errno != EPERM)
-        chown_error_details (file_hdr->c_name, uid, gid);
+	chown_error_details (file_hdr->c_name, uid, gid);
     }
   /* chown may have turned off some permissions we wanted. */
   if (chmod (file_hdr->c_name, file_hdr->c_mode) < 0)
     chmod_error_details (file_hdr->c_name, file_hdr->c_mode);
   if (retain_time_flag)
     set_file_times (-1, file_hdr->c_name, file_hdr->c_mtime,
-		    file_hdr->c_mtime);
+		    file_hdr->c_mtime, 0);
+}
+
+struct delayed_link
+  {
+    /* The device and inode number of the placeholder. */
+    dev_t dev;
+    ino_t ino;
+
+    /* The desired link metadata. */
+    mode_t mode;
+    uid_t uid;
+    gid_t gid;
+    time_t mtime;
+
+    /* Link source and target names. */
+    char *source;
+    char target[1];
+  };
+
+static Hash_table *delayed_link_table;
+
+static size_t
+dl_hash (void const *entry, size_t table_size)
+{
+  struct delayed_link const *dl = entry;
+  uintmax_t n = dl->dev;
+  int nshift = (sizeof (n) - sizeof (dl->dev)) * CHAR_BIT;
+  if (0 < nshift)
+    n <<= nshift;
+  n ^= dl->ino;
+  return n % table_size;
+}
+
+static bool
+dl_compare (void const *a, void const *b)
+{
+  struct delayed_link const *da = a, *db = b;
+  return (da->dev == db->dev) & (da->ino == db->ino);
+}
+
+static int
+symlink_placeholder (char *oldpath, char *newpath, struct cpio_file_stat *file_stat)
+{
+  int fd = open (newpath, O_WRONLY | O_CREAT | O_EXCL, 0);
+  struct stat st;
+  struct delayed_link *p;
+  size_t newlen = strlen (newpath);
+
+  if (fd < 0 && create_dir_flag)
+    {
+      create_all_directories (newpath);
+      fd = open (newpath, O_WRONLY | O_CREAT | O_EXCL, 0);
+    }
+
+  if (fd < 0)
+    {
+      open_error (newpath);
+      return -1;
+    }
+
+  if (fstat (fd, &st) != 0)
+    {
+      stat_error (newpath);
+      close (fd);
+      return -1;
+    }
+
+  close (fd);
+
+  p = xmalloc (sizeof (*p) + strlen (oldpath) + newlen + 1);
+  p->dev = st.st_dev;
+  p->ino = st.st_ino;
+
+  p->mode = file_stat->c_mode;
+  p->uid = file_stat->c_uid;
+  p->gid = file_stat->c_gid;
+  p->mtime = file_stat->c_mtime;
+
+  strcpy (p->target, newpath);
+  p->source = p->target + newlen + 1;
+  strcpy (p->source, oldpath);
+
+  if (!((delayed_link_table
+	 || (delayed_link_table = hash_initialize (0, 0, dl_hash,
+						   dl_compare, free)))
+	&& hash_insert (delayed_link_table, p)))
+    xalloc_die ();
+
+  return 0;
+}
+
+static void
+replace_symlink_placeholders (void)
+{
+  struct delayed_link *dl;
+
+  if (!delayed_link_table)
+    return;
+  for (dl = hash_get_first (delayed_link_table);
+       dl;
+       dl = hash_get_next (delayed_link_table, dl))
+    {
+      struct stat st;
+
+      /* Make sure the placeholder file is still there.  If not,
+	 don't create a link, as the placeholder was probably
+	 removed by a later extraction.  */
+      if (lstat (dl->target, &st) == 0
+	  && st.st_dev == dl->dev
+	  && st.st_ino == dl->ino)
+	{
+	  if (unlink (dl->target))
+	    unlink_error (dl->target);
+	  else
+	    {
+	      int res = UMASKED_SYMLINK (dl->source, dl->target, dl->mode);
+	      if (res < 0 && create_dir_flag)
+		{
+		  create_all_directories (dl->target);
+		  res = UMASKED_SYMLINK (dl->source, dl->target, dl->mode);
+		}
+	      if (res < 0)
+		symlink_error (dl->source, dl->target);
+	      else
+		{
+		  if (!no_chown_flag)
+		    {
+		      uid_t uid = set_owner_flag ? set_owner : dl->uid;
+		      gid_t gid = set_group_flag ? set_group : dl->gid;
+		      if (lchown (dl->target, uid, gid) < 0 && errno != EPERM)
+			chown_error_details (dl->target, uid, gid);
+		    }
+		  if (retain_time_flag)
+		    set_file_times (-1, dl->target, dl->mtime, dl->mtime,
+				    AT_SYMLINK_NOFOLLOW);
+		}
+	    }
+	}
+    }
+
+  hash_free (delayed_link_table);
+  delayed_link_table = NULL;
 }
 
 static void
@@ -629,11 +773,11 @@ copyin_link (struct cpio_file_stat *file_hdr, int in_file_des)
   if (archive_format != arf_tar && archive_format != arf_ustar)
     {
       if (to_stdout_option)
-        {
-          tape_toss_input (in_file_des, file_hdr->c_filesize);
-          tape_skip_padding (in_file_des, file_hdr->c_filesize);
-          return;
-        }
+	{
+	  tape_toss_input (in_file_des, file_hdr->c_filesize);
+	  tape_skip_padding (in_file_des, file_hdr->c_filesize);
+	  return;
+	}
       link_name = get_link_name (file_hdr, in_file_des);
       if (!link_name)
 	return;
@@ -641,33 +785,34 @@ copyin_link (struct cpio_file_stat *file_hdr, int in_file_des)
   else
     {
       if (to_stdout_option)
-        return;
+	return;
       link_name = xstrdup (file_hdr->c_tar_linkname);
     }
 
-  cpio_safer_name_suffix (link_name, true, !no_abs_paths_flag, false);
-  
-  res = UMASKED_SYMLINK (link_name, file_hdr->c_name,
-			 file_hdr->c_mode);
-  if (res < 0 && create_dir_flag)
+  if (no_abs_paths_flag)
+    symlink_placeholder (link_name, file_hdr->c_name, file_hdr);
+  else
     {
-      create_all_directories (file_hdr->c_name);
-      res = UMASKED_SYMLINK (link_name, file_hdr->c_name, file_hdr->c_mode);
-    }
-  if (res < 0)
-    {
-      error (0, errno, _("%s: Cannot symlink to %s"),
-	     quotearg_colon (link_name), quote_n (1, file_hdr->c_name));
-      free (link_name);
-      return;
-    }
-  if (!no_chown_flag)
-    {
-      uid_t uid = set_owner_flag ? set_owner : file_hdr->c_uid;
-      gid_t gid = set_group_flag ? set_group : file_hdr->c_gid;
-      if ((lchown (file_hdr->c_name, uid, gid) < 0)
-  	  && errno != EPERM)
-	chown_error_details (file_hdr->c_name, uid, gid);
+      res = UMASKED_SYMLINK (link_name, file_hdr->c_name,
+			     file_hdr->c_mode);
+      if (res < 0 && create_dir_flag)
+	{
+	  create_all_directories (file_hdr->c_name);
+	  res = UMASKED_SYMLINK (link_name, file_hdr->c_name, file_hdr->c_mode);
+	}
+      if (res < 0)
+	symlink_error (link_name, file_hdr->c_name);
+      else if (!no_chown_flag)
+	{
+	  uid_t uid = set_owner_flag ? set_owner : file_hdr->c_uid;
+	  gid_t gid = set_group_flag ? set_group : file_hdr->c_gid;
+	  if (lchown (file_hdr->c_name, uid, gid) < 0 && errno != EPERM)
+	    chown_error_details (file_hdr->c_name, uid, gid);
+	}
+
+      if (retain_time_flag)
+	set_file_times (-1, file_hdr->c_name, file_hdr->c_mtime,
+			file_hdr->c_mtime, AT_SYMLINK_NOFOLLOW);
     }
   free (link_name);
 }
@@ -718,7 +863,7 @@ copyin_file (struct cpio_file_stat *file_hdr, int in_file_des)
 
 
 /* Current time for verbose table.  */
-static time_t current_time;
+static struct timespec current_time;
 
 
 /* Print the file described by FILE_HDR in long format.
@@ -729,41 +874,64 @@ void
 long_format (struct cpio_file_stat *file_hdr, char const *link_name)
 {
   char mbuf[11];
-  char tbuf[40];
   time_t when;
+  char *tbuf;
+  struct timespec when_timespec;
+  /* A Gregorian year has 365.2425 * 24 * 60 * 60 == 31556952 seconds
+     on the average.  Write this value as an integer constant to
+     avoid floating point hassles. */
+  struct timespec six_months_ago = {
+    .tv_sec = current_time.tv_sec - 31556952 / 2,
+    .tv_nsec = current_time.tv_nsec
+  };
 
   mode_string (file_hdr->c_mode, mbuf);
   mbuf[10] = '\0';
 
-  /* Get time values ready to print.  */
-  when = file_hdr->c_mtime;
-  strcpy (tbuf, ctime (&when));
-  if (current_time - when > 6L * 30L * 24L * 60L * 60L
-      || current_time - when < 0L)
-    {
-      /* The file is older than 6 months, or in the future.
-	 Show the year instead of the time of day.  */
-      strcpy (tbuf + 11, tbuf + 19);
-    }
-  tbuf[16] = '\0';
-
-  printf ("%s %3lu ", mbuf, (unsigned long) file_hdr->c_nlink);
+  printf ("%s %3ju ", mbuf, (uintmax_t) file_hdr->c_nlink);
 
   if (numeric_uid)
-    printf ("%-8u %-8u ", (unsigned int) file_hdr->c_uid,
-	    (unsigned int) file_hdr->c_gid);
+    printf ("%-8ju %-8ju ",
+	    (uintmax_t) file_hdr->c_uid,
+	    (uintmax_t) file_hdr->c_gid);
   else
     printf ("%-8.8s %-8.8s ", getuser (file_hdr->c_uid),
 	    getgroup (file_hdr->c_gid));
 
   if ((file_hdr->c_mode & CP_IFMT) == CP_IFCHR
       || (file_hdr->c_mode & CP_IFMT) == CP_IFBLK)
-    printf ("%3lu, %3lu ", file_hdr->c_rdev_maj,
-	    file_hdr->c_rdev_min);
+    printf ("%3ju, %3ju ",
+	    (uintmax_t) file_hdr->c_rdev_maj,
+	    (uintmax_t) file_hdr->c_rdev_min);
   else
-    printf ("%8"PRIuMAX" ", (uintmax_t) file_hdr->c_filesize);
+    printf ("%8ju ", (uintmax_t) file_hdr->c_filesize);
 
-  printf ("%s ", tbuf + 4);
+  when = file_hdr->c_mtime;
+  when_timespec.tv_sec = when;
+  when_timespec.tv_nsec = 0;
+
+  /* Get time values ready to print.  Do not worry about ctime failing,
+     or a year outside the range 1000-9999, since 0 <= WHEN < 2**33.  */
+  tbuf = ctime (&when);
+
+  /* If the file appears to be in the future, update the current
+     time, in case the file happens to have been modified since
+     the last time we checked the clock.  */
+  if (timespec_cmp (current_time, when_timespec) < 0)
+    current_time = current_timespec ();
+
+  /* Consider a time to be recent if it is within the past six months.
+     Use the same algorithm that GNU 'ls' does, for consistency. */
+  if (!(timespec_cmp (six_months_ago, when_timespec) < 0
+	&& timespec_cmp (when_timespec, current_time) < 0))
+    {
+      /* The file is older than 6 months, or in the future.
+	 Show the year instead of the time of day.  */
+      memcpy (tbuf + 11, tbuf + 19, sizeof " 1970" - 1);
+    }
+  tbuf[16] = ' ';
+  tbuf[17] = '\0';
+  printf ("%s", tbuf + 4);
 
   printf ("%s", quotearg (file_hdr->c_name));
   if (link_name)
@@ -771,7 +939,7 @@ long_format (struct cpio_file_stat *file_hdr, char const *link_name)
       printf (" -> ");
       printf ("%s", quotearg (link_name));
     }
-  putc ('\n', stdout);
+  putchar ('\n');
 }
 
 /* Read a pattern file (for the -E option).  Put a list of
@@ -779,37 +947,36 @@ long_format (struct cpio_file_stat *file_hdr, char const *link_name)
    already in `save_patterns' (from the command line) are preserved.  */
 
 static void
-read_pattern_file ()
+read_pattern_file (void)
 {
-  int max_new_patterns;
-  char **new_save_patterns;
-  int new_num_patterns;
+  char **new_save_patterns = NULL;
+  size_t max_new_patterns;
+  size_t new_num_patterns;
   int i;
-  dynamic_string pattern_name;
+  dynamic_string pattern_name = DYNAMIC_STRING_INITIALIZER;
   FILE *pattern_fp;
 
   if (num_patterns < 0)
     num_patterns = 0;
-  max_new_patterns = 1 + num_patterns;
-  new_save_patterns = (char **) xmalloc (max_new_patterns * sizeof (char *));
   new_num_patterns = num_patterns;
-  ds_init (&pattern_name, 128);
+  max_new_patterns = num_patterns;
+  new_save_patterns = xcalloc (max_new_patterns, sizeof (new_save_patterns[0]));
 
   pattern_fp = fopen (pattern_file_name, "r");
   if (pattern_fp == NULL)
     open_fatal (pattern_file_name);
   while (ds_fgetstr (pattern_fp, &pattern_name, '\n') != NULL)
     {
-      if (new_num_patterns >= max_new_patterns)
-	{
-	  max_new_patterns += 1;
-	  new_save_patterns = (char **)
-	    xrealloc ((char *) new_save_patterns,
-		      max_new_patterns * sizeof (char *));
-	}
+      if (new_num_patterns == max_new_patterns)
+	new_save_patterns = x2nrealloc (new_save_patterns,
+					&max_new_patterns,
+					sizeof (new_save_patterns[0]));
       new_save_patterns[new_num_patterns] = xstrdup (pattern_name.ds_string);
       ++new_num_patterns;
     }
+
+  ds_free (&pattern_name);
+
   if (ferror (pattern_fp) || fclose (pattern_fp) == EOF)
     close_error (pattern_file_name);
 
@@ -841,14 +1008,14 @@ from_ascii (char const *where, size_t digs, unsigned logbase)
   while (1)
     {
       unsigned d;
-      
+
       char *p = strchr (codetab, toupper (*buf));
       if (!p)
 	{
 	  error (0, 0, _("Malformed number %.*s"), (int) digs, where);
 	  break;
 	}
-      
+
       d = p - codetab;
       if ((d >> logbase) > 1)
 	{
@@ -998,8 +1165,21 @@ read_in_header (struct cpio_file_stat *file_hdr, int in_des)
 static void
 read_name_from_file (struct cpio_file_stat *file_hdr, int fd, uintmax_t len)
 {
-  cpio_realloc_c_name (file_hdr, len);
-  tape_buffered_read (file_hdr->c_name, fd, len);
+  if (len == 0)
+    {
+      error (0, 0, _("malformed header: file name of zero length"));
+    }
+  else
+    {
+      cpio_realloc_c_name (file_hdr, len);
+      tape_buffered_read (file_hdr->c_name, fd, len);
+      if (file_hdr->c_name[len-1] != 0)
+	{
+	  error (0, 0, _("malformed header: file name is not nul-terminated"));
+	  /* Skip this file */
+	  len = 0;
+	}
+    }
   file_hdr->c_namesize = len;
 }
 
@@ -1133,9 +1313,9 @@ read_in_binary (struct cpio_file_stat *file_hdr,
   file_hdr->c_rdev_maj = major (short_hdr->c_rdev);
   file_hdr->c_rdev_min = minor (short_hdr->c_rdev);
   file_hdr->c_mtime = (unsigned long) short_hdr->c_mtimes[0] << 16
-                      | short_hdr->c_mtimes[1];
+		      | short_hdr->c_mtimes[1];
   file_hdr->c_filesize = (unsigned long) short_hdr->c_filesizes[0] << 16
-                      | short_hdr->c_filesizes[1];
+		      | short_hdr->c_filesizes[1];
   read_name_from_file (file_hdr, in_des, short_hdr->c_namesize);
 
   /* In binary mode, the amount of space allocated in the header for
@@ -1196,28 +1376,27 @@ swab_array (char *ptr, int count)
    in the file system.  */
 
 void
-process_copy_in ()
+process_copy_in (void)
 {
-  char done = false;		/* True if trailer reached.  */
   FILE *tty_in = NULL;		/* Interactive file for rename option.  */
   FILE *tty_out = NULL;		/* Interactive file for rename option.  */
   FILE *rename_in = NULL;	/* Batch file for rename option.  */
   struct stat file_stat;	/* Output file stat record.  */
   struct cpio_file_stat file_hdr = CPIO_FILE_STAT_INITIALIZER;
-                                /* Output header information.  */
+				/* Output header information.  */
   int in_file_des;		/* Input file descriptor.  */
   char skip_file;		/* Flag for use with patterns.  */
   int i;			/* Loop index variable.  */
 
   newdir_umask = umask (0);     /* Reset umask to preserve modes of
 				   created files  */
-  
+
   /* Initialize the copy in.  */
   if (pattern_file_name)
     {
       read_pattern_file ();
     }
-  
+
   if (rename_batch_file)
     {
       rename_in = fopen (rename_batch_file, "r");
@@ -1243,9 +1422,7 @@ process_copy_in ()
 
   /* Get date and time if needed for processing the table option.  */
   if (table_flag && verbose_flag)
-    {
-      time (&current_time);
-    }
+    current_time = current_timespec ();
 
   /* Check whether the input file might be a tape.  */
   in_file_des = archive_des;
@@ -1268,9 +1445,9 @@ process_copy_in ()
   output_is_seekable = true;
 
   change_dir ();
-  
+
   /* While there is more input in the collection, process the input.  */
-  while (!done)
+  while (1)
     {
       swapping_halfwords = swapping_bytes = false;
 
@@ -1282,18 +1459,18 @@ process_copy_in ()
 	{
 	  struct cpio_file_stat *h;
 	  h = &file_hdr;
-	  fprintf (stderr, 
+	  fprintf (stderr,
 		"magic = 0%o, ino = %ld, mode = 0%o, uid = %d, gid = %d\n",
 		h->c_magic, (long)h->c_ino, h->c_mode, h->c_uid, h->c_gid);
-	  fprintf (stderr, 
+	  fprintf (stderr,
 		"nlink = %d, mtime = %d, filesize = %d, dev_maj = 0x%x\n",
 		h->c_nlink, h->c_mtime, h->c_filesize, h->c_dev_maj);
-	  fprintf (stderr, 
-	        "dev_min = 0x%x, rdev_maj = 0x%x, rdev_min = 0x%x, namesize = %d\n",
+	  fprintf (stderr,
+		"dev_min = 0x%x, rdev_maj = 0x%x, rdev_min = 0x%x, namesize = %d\n",
 		h->c_dev_min, h->c_rdev_maj, h->c_rdev_min, h->c_namesize);
-	  fprintf (stderr, 
+	  fprintf (stderr,
 		"chksum = %d, name = \"%s\", tar_linkname = \"%s\"\n",
-		h->c_chksum, h->c_name, 
+		h->c_chksum, h->c_name,
 		h->c_tar_linkname ? h->c_tar_linkname : "(null)" );
 
 	}
@@ -1304,14 +1481,11 @@ process_copy_in ()
 	{
 	  /* Is this the header for the TRAILER file?  */
 	  if (strcmp (CPIO_TRAILER_NAME, file_hdr.c_name) == 0)
-	    {
-	      done = true;
-	      break;
-	    }
+	    break;
 
 	  cpio_safer_name_suffix (file_hdr.c_name, false, !no_abs_paths_flag,
 				  false);
-      
+
 	  /* Does the file name match one of the given patterns?  */
 	  if (num_patterns <= 0)
 	    skip_file = false;
@@ -1326,7 +1500,7 @@ process_copy_in ()
 		}
 	    }
 	}
-      
+
       if (skip_file)
 	{
 	  /* If we're skipping a file with links, there might be other
@@ -1337,7 +1511,7 @@ process_copy_in ()
 	      || archive_format == arf_crcascii) )
 	    {
 	      if (create_defered_links_to_skipped(&file_hdr, in_file_des) < 0)
-	        {
+		{
 		  tape_toss_input (in_file_des, file_hdr.c_filesize);
 		  tape_skip_padding (in_file_des, file_hdr.c_filesize);
 		}
@@ -1378,8 +1552,8 @@ process_copy_in ()
 		error (0, 0, _("%s: checksum error (0x%x, should be 0x%x)"),
 		       file_hdr.c_name, crc, file_hdr.c_chksum);
 	      }
-         /* Debian hack: -v and -V now work with --only-verify-crc.
-            (99/11/10) -BEM */
+	 /* Debian hack: -v and -V now work with --only-verify-crc.
+	    (99/11/10) -BEM */
 	    if (verbose_flag)
 	      {
 		fprintf (stderr, "%s\n", file_hdr.c_name);
@@ -1397,7 +1571,7 @@ process_copy_in ()
 	  if (rename_flag || rename_batch_file)
 	    {
 	      if (query_rename(&file_hdr, tty_in, tty_out, rename_in) < 0)
-	        {
+		{
 		  tape_toss_input (in_file_des, file_hdr.c_filesize);
 		  tape_skip_padding (in_file_des, file_hdr.c_filesize);
 		  continue;
@@ -1416,10 +1590,11 @@ process_copy_in ()
   if (dot_flag)
     fputc ('\n', stderr);
 
+  replace_symlink_placeholders ();
   apply_delayed_set_stat ();
 
   cpio_file_stat_free (&file_hdr);
-  
+
   if (append_flag)
     return;
 
@@ -1437,4 +1612,3 @@ process_copy_in ()
 	       (unsigned long) blocks);
     }
 }
-

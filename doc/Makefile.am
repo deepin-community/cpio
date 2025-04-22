@@ -1,6 +1,5 @@
 # This file is part of GNU cpio
-# Copyright (C) 2004, 2007, 2010, 2014-2015, 2017 Free Software
-# Foundation, Inc.
+# Copyright (C) 2004-2024 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,11 +29,17 @@ endif
 EXTRA_DIST = gendocs.sh gendocs_template mt.1 rmt.8
 
 GENDOCS=$(srcdir)/gendocs.sh
+TEXI2DVI=texi2dvi -E
 
 # Make sure you set TEXINPUT 
 manual:
 	rm -rf manual
 	TEXINPUTS=$(srcdir):$(top_srcdir)/scripts:$$TEXINPUTS \
 	  MAKEINFO="$(MAKEINFO) $(AM_MAKEINFOFLAGS) $(MAKEINFOFLAGS)" \
-	  TEXI2DVI="texi2dvi -t @finalout" \
-	  $(GENDOCS) --no-copy-images $(PACKAGE) '$(PACKAGE_NAME) manual'
+	  TEXI2DVI="texi2dvi -t '@set DISTRIB' -t @finalout" \
+	  $(GENDOCS) --texi2html $(PACKAGE) '$(PACKAGE_NAME) manual'
+
+manual-rebuild: clean-local manual
+
+clean-local:
+	rm -rf manual

@@ -1,6 +1,5 @@
 /* makepath.c -- Ensure that a directory path exists.
-   Copyright (C) 1990, 2006-2007, 2010, 2014-2015, 2017 Free Software
-   Foundation, Inc.
+   Copyright (C) 1990-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -95,7 +94,7 @@ make_path (char const *argpath,
 			stats.st_uid = owner;
 		      if (group != -1)
 			stats.st_gid = group;
-		      
+
 		      delay_set_stat (dirpath, &stats, invert_permissions);
 		    }
 		}
@@ -119,7 +118,7 @@ make_path (char const *argpath,
 
       if (mkdir (dirpath, tmpmode ^ invert_permissions))
 	{
-	  /* In some cases, if the final component in dirpath was `.' then we 
+	  /* In some cases, if the final component in dirpath was `.' then we
 	     just got an EEXIST error from that last mkdir().  If that's
 	     the case, ignore it.  */
 	  if ( (errno != EEXIST) ||
@@ -138,10 +137,10 @@ make_path (char const *argpath,
 	    stats.st_uid = owner;
 	  if (group != -1)
 	    stats.st_gid = group;
-	  
+
 	  delay_set_stat (dirpath, &stats, invert_permissions);
 	}
-	
+
       if (verbose_fmt_string != NULL)
 	error (0, 0, verbose_fmt_string, dirpath);
 

@@ -1,6 +1,5 @@
 /* extern.h - External declarations for cpio.  Requires system.h.
-   Copyright (C) 1990-1992, 2001, 2006-2007, 2009-2010, 2014-2017 Free
-   Software Foundation, Inc.
+   Copyright (C) 1990-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,6 +19,7 @@
 #include "paxlib.h"
 #include "quotearg.h"
 #include "quote.h"
+#include "inttostr.h"
 
 enum archive_format
 {
@@ -58,6 +58,7 @@ extern unsigned int warn_option;
 extern mode_t newdir_umask;
 extern int renumber_inodes_option;
 extern int ignore_devno_option;
+extern int ignore_dirnlink_option;
 
 /* Values for warn_option */
 #define CPIO_WARN_NONE     0
@@ -67,7 +68,7 @@ extern int ignore_devno_option;
 
 extern bool to_stdout_option;
 
-extern int last_header_start;
+extern off_t last_header_start;
 extern int copy_matching_files;
 extern int numeric_uid;
 extern char *pattern_file_name;
@@ -99,6 +100,10 @@ extern char output_is_seekable;
 extern int (*xstat) ();
 extern void (*copy_function) ();
 extern char *change_directory_option;
+
+#define STRINGIFY_BIGINT(i, b) umaxtostr (i, b)
+enum { UINTMAX_STRSIZE_BOUND = INT_BUFSIZE_BOUND (intmax_t) };
+
 
 
 /* copyin.c */
@@ -123,7 +128,7 @@ void field_width_error (const char *filename, const char *fieldname,
 
 /* copypass.c */
 void process_copy_pass (void);
-int link_to_maj_min_ino (char *file_name, int st_dev_maj, 
+int link_to_maj_min_ino (char *file_name, int st_dev_maj,
 			 int st_dev_min, ino_t st_ino);
 int link_to_name (char const *link_name, char const *link_target);
 
@@ -156,8 +161,8 @@ int is_tar_header (char *buf);
 int is_tar_filename_too_long (char *name);
 
 /* userspec.c */
-char *parse_user_spec (char *name, uid_t *uid, gid_t *gid,
-		       char **username, char **groupname);
+const char *parse_user_spec (const char *spec_arg, uid_t *uid, gid_t *gid,
+			     char **username_arg, char **groupname_arg);
 
 /* util.c */
 void tape_empty_output_buffer (int out_des);
@@ -171,7 +176,7 @@ void copy_files_tape_to_disk (int in_des, int out_des, off_t num_bytes);
 void copy_files_disk_to_tape (int in_des, int out_des, off_t num_bytes, char *filename);
 void copy_files_disk_to_disk (int in_des, int out_des, off_t num_bytes, char *filename);
 void warn_if_file_changed (char *file_name, off_t old_file_size,
-                           time_t old_file_mtime);
+			   time_t old_file_mtime);
 void create_all_directories (char const *name);
 void prepare_append (int out_file_des);
 char *find_inode_file (ino_t node_num,
@@ -185,7 +190,7 @@ void set_new_media_message (char *message);
 #ifdef HPUX_CDF
 char *add_cdf_double_slashes (char *filename);
 #endif
-void write_nuls_to_file (off_t num_bytes, int out_des, 
+void write_nuls_to_file (off_t num_bytes, int out_des,
 			 void (*writer) (char *in_buf,
 					 int out_des, off_t num_bytes));
 #define DISK_IO_BLOCK_SIZE	512
@@ -199,7 +204,7 @@ void write_nuls_to_file (off_t num_bytes, int out_des,
 
 void set_perms (int fd, struct cpio_file_stat *header);
 void set_file_times (int fd, const char *name, unsigned long atime,
-		     unsigned long mtime);
+		     unsigned long mtime, int atflag);
 void stat_to_cpio (struct cpio_file_stat *hdr, struct stat *st);
 void cpio_to_stat (struct stat *st, struct cpio_file_stat *hdr);
 void cpio_safer_name_suffix (char *name, bool link_target,
@@ -229,6 +234,5 @@ void delay_set_stat (char const *file_name, struct stat *st,
 		     mode_t invert_permissions);
 int repair_delayed_set_stat (struct cpio_file_stat *file_hdr);
 void apply_delayed_set_stat (void);
-     
-int arf_stores_inode_p (enum archive_format arf);
 
+int arf_stores_inode_p (enum archive_format arf);

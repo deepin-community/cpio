@@ -1,3 +1,72 @@
+cpio (2.15+dfsg-2) unstable; urgency=medium
+
+  [ Miriam España Acebal <miriam.espana@canonical.com> ]
+  * d/prerm, d/postinst: fix path according to /usr movement (LP: #2052295)
+
+  [ Zixing Liu <zixing.liu@canonical.com> ]
+  * Use compat level 13 (Closes: #1073111, #851631).
+    - Switch to use autoconf Debian Helper template.
+    - Switch to use dh generated alternatives scripts.
+    - Remove all manual installation steps from d/rules.
+
+  [ Anibal Monsalve Salazar ]
+  * Standards-Version: 4.7.0
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Sat, 27 Jul 2024 22:34:40 +1000
+
+cpio (2.15+dfsg-1) unstable; urgency=medium
+
+  * New upstream release
+    Noteworthy changes in this release:
+    - Fix operation of --no-absolute-filenames --make-directories 
+    - Restore access and modification times of symlinks in copy-in
+      and copy-pass modes.
+  * Update debian/watch 
+  * Move files to /usr
+    Patch by Helmut Grohne <helmut@subdivi.de>
+    Closes: #1059756
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Mon, 15 Jan 2024 20:38:45 +1100
+
+cpio (2.14+dfsg-1) unstable; urgency=medium
+
+  * New upstream release
+    Closes: #1049402
+    Noteworthy changes in this release:
+    - New option --ignore-dirnlink
+      Valid in copy-out mode, it instructs cpio to ignore the actual number
+      of links reported for each directory member and always store 2
+      instead.
+    - Changes in --reproducible option
+      The --reproducible option implies --ignore-dirlink.  In other words,
+      it is equivalent to --ignore-devno --ignore-dirnlink --renumber-inodes.
+    - Use GNU ls algorithm for deciding timestamp format in -tv mode
+    - Bugfixes
+      - Fix cpio header verification.
+      - Fix handling of device numbers on copy out.
+      - Fix calculation of CRC in copy-out mode.
+      - Rewrite the fix for CVE-2015-1197.
+      - Fix combination of --create --append --directory.
+      - Fix appending to archives bigger than 2G.
+  * Update uploaders list
+    Closes: #925021
+  * Standards-Version: 4.6.2
+  * Fix Path traversal vulnerability due to partial revert of fix for CVE-2015-1197
+    Closes: #1059163
+  * cpio-win32 is no longer needed
+    Closes: #1059238
+
+ -- Anibal Monsalve Salazar <anibal@debian.org>  Fri, 22 Dec 2023 16:38:54 +1100
+
+cpio (2.13+dfsg-7.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Suggest libarchive-dev (Closes: #662718).
+  * d/copyright: Convert to machine-readable format.
+  * Fix CRC with new ASCII format when file > 2GB (Closes: #962188).
+
+ -- Bastian Germann <bage@debian.org>  Wed, 14 Sep 2022 21:45:55 +0200
+
 cpio (2.13+dfsg-7) unstable; urgency=medium
 
   [ Salvatore Bonaccorso ]

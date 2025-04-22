@@ -6,11 +6,11 @@ Subject: no-cpio.info-2
  doc/Makefile.am | 1 -
  1 file changed, 1 deletion(-)
 
-diff --git a/doc/Makefile.am b/doc/Makefile.am
-index 98d26da..b685d60 100644
---- a/doc/Makefile.am
-+++ b/doc/Makefile.am
-@@ -17,7 +17,6 @@
+Index: cpio-2.14+dfsg/doc/Makefile.am
+===================================================================
+--- cpio-2.14+dfsg.orig/doc/Makefile.am
++++ cpio-2.14+dfsg/doc/Makefile.am
+@@ -16,7 +16,6 @@
  # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  # 02110-1301 USA.
  

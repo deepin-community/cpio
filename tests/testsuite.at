@@ -1,8 +1,7 @@
 # Process this file with autom4te to create testsuite. -*- Autotest -*-
 
 # Test suite for GNU cpio
-# Copyright (C) 2004, 2006-2007, 2010, 2014-2015, 2017 Free Software
-# Foundation, Inc.
+# Copyright (C) 2004-2024 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -46,3 +45,6 @@ m4_include([big-block-size.at])
 
 m4_include([CVE-2015-1197.at])
 m4_include([CVE-2019-14866.at])
+
+m4_include([linktime.at])
+m4_include([linktime01.at])

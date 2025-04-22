@@ -1,6 +1,5 @@
 /* copypass.c - cpio copy pass sub-function.
-   Copyright (C) 1990-1992, 2001, 2003-2004, 2006-2007, 2010, 2014-2015,
-   2017 Free Software Foundation, Inc.
+   Copyright (C) 1990-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -48,10 +47,12 @@ set_copypass_perms (int fd, const char *name, struct stat *st)
    If `link_flag', link instead of copying.  */
 
 void
-process_copy_pass ()
+process_copy_pass (void)
 {
-  dynamic_string input_name;	/* Name of file from stdin.  */
-  dynamic_string output_name;	/* Name of new file.  */
+  dynamic_string input_name = DYNAMIC_STRING_INITIALIZER;
+				/* Name of file from stdin.  */
+  dynamic_string output_name = DYNAMIC_STRING_INITIALIZER;
+				/* Name of new file.  */
   size_t dirname_len;		/* Length of `directory_name'.  */
   int res;			/* Result of functions.  */
   char *slash;			/* For moving past slashes in input name.  */
@@ -65,29 +66,22 @@ process_copy_pass ()
 				   created files  */
 
   /* Initialize the copy pass.  */
-  ds_init (&input_name, 128);
-  
+
   dirname_len = strlen (directory_name);
   if (change_directory_option && !ISSLASH (directory_name[0]))
     {
       char *pwd = xgetcwd ();
 
-      dirname_len += strlen (pwd) + 1;
-      ds_init (&output_name, dirname_len + 2);
-      strcpy (output_name.ds_string, pwd);
-      strcat (output_name.ds_string, "/");
-      strcat (output_name.ds_string, directory_name);
+      ds_concat (&output_name, pwd);
+      ds_append (&output_name, '/');
     }
-  else
-    {
-      ds_init (&output_name, dirname_len + 2);
-      strcpy (output_name.ds_string, directory_name);
-    }
-  output_name.ds_string[dirname_len] = '/';
+  ds_concat (&output_name, directory_name);
+  ds_append (&output_name, '/');
+  dirname_len = ds_len (&output_name);
   output_is_seekable = true;
 
   change_dir ();
-  
+
   /* Copy files with names read from stdin.  */
   while (ds_fgetstr (stdin, &input_name, name_end) != NULL)
     {
@@ -116,8 +110,8 @@ process_copy_pass ()
       /* Make the name of the new file.  */
       for (slash = input_name.ds_string; *slash == '/'; ++slash)
 	;
-      ds_resize (&output_name, dirname_len + strlen (slash) + 2);
-      strcpy (output_name.ds_string + dirname_len + 1, slash);
+      ds_reset (&output_name, dirname_len);
+      ds_concat (&output_name, slash);
 
       existing_dir = false;
       if (lstat (output_name.ds_string, &out_file_stat) == 0)
@@ -155,12 +149,12 @@ process_copy_pass ()
 	    /* User said to link it if possible.  Try and link to
 	       the original copy.  If that fails we'll still try
 	       and link to a copy we've already made.  */
-	    link_res = link_to_name (output_name.ds_string, 
+	    link_res = link_to_name (output_name.ds_string,
 				     input_name.ds_string);
 	  if ( (link_res < 0) && (in_file_stat.st_nlink > 1) )
-	    link_res = link_to_maj_min_ino (output_name.ds_string, 
-				major (in_file_stat.st_dev), 
-				minor (in_file_stat.st_dev), 
+	    link_res = link_to_maj_min_ino (output_name.ds_string,
+				major (in_file_stat.st_dev),
+				minor (in_file_stat.st_dev),
 				in_file_stat.st_ino);
 
 	  /* If the file was not linked, copy contents of file.  */
@@ -190,21 +184,23 @@ process_copy_pass ()
 
 	      copy_files_disk_to_disk (in_file_des, out_file_des, in_file_stat.st_size, input_name.ds_string);
 	      disk_empty_output_buffer (out_file_des, true);
-	      
+
 	      set_copypass_perms (out_file_des,
 				  output_name.ds_string, &in_file_stat);
 
 	      if (reset_time_flag)
-                {
-                  set_file_times (in_file_des,
+		{
+		  set_file_times (in_file_des,
 				  input_name.ds_string,
-                                  in_file_stat.st_atime,
-                                  in_file_stat.st_mtime);
-                  set_file_times (out_file_des,
+				  in_file_stat.st_atime,
+				  in_file_stat.st_mtime,
+				  0);
+		  set_file_times (out_file_des,
 				  output_name.ds_string,
-                                  in_file_stat.st_atime,
-                                  in_file_stat.st_mtime);
-	        } 
+				  in_file_stat.st_atime,
+				  in_file_stat.st_mtime,
+				  0);
+		}
 
 	      if (close (in_file_des) < 0)
 		close_error (input_name.ds_string);
@@ -213,13 +209,13 @@ process_copy_pass ()
 		close_error (output_name.ds_string);
 
 	      warn_if_file_changed(input_name.ds_string, in_file_stat.st_size,
-                                   in_file_stat.st_mtime);
+				   in_file_stat.st_mtime);
 	    }
 	}
       else if (S_ISDIR (in_file_stat.st_mode))
 	{
 	  struct cpio_file_stat file_stat;
-	  
+
 	  stat_to_cpio (&file_stat, &in_file_stat);
 	  file_stat.c_name = output_name.ds_string;
 	  cpio_create_dir (&file_stat, existing_dir);
@@ -238,10 +234,10 @@ process_copy_pass ()
 	     Set link_name to the original file name.  */
 	  if (link_flag)
 	    /* User said to link it if possible.  */
-	    link_res = link_to_name (output_name.ds_string, 
+	    link_res = link_to_name (output_name.ds_string,
 				     input_name.ds_string);
 	  if ( (link_res < 0) && (in_file_stat.st_nlink > 1) )
-	    link_res = link_to_maj_min_ino (output_name.ds_string, 
+	    link_res = link_to_maj_min_ino (output_name.ds_string,
 			major (in_file_stat.st_dev),
 			minor (in_file_stat.st_dev),
 			in_file_stat.st_ino);
@@ -273,7 +269,7 @@ process_copy_pass ()
 	  link_name = (char *) xmalloc ((unsigned int) in_file_stat.st_size + 1);
 
 	  link_size = readlink (input_name.ds_string, link_name,
-			        in_file_stat.st_size);
+				in_file_stat.st_size);
 	  if (link_size < 0)
 	    {
 	      readlink_error (input_name.ds_string);
@@ -299,13 +295,18 @@ process_copy_pass ()
 
 	  /* Set the attributes of the new link.  */
 	  if (!no_chown_flag)
-            {
-              uid_t uid = set_owner_flag ? set_owner : in_file_stat.st_uid;
-              gid_t gid = set_group_flag ? set_group : in_file_stat.st_gid;
+	    {
+	      uid_t uid = set_owner_flag ? set_owner : in_file_stat.st_uid;
+	      gid_t gid = set_group_flag ? set_group : in_file_stat.st_gid;
 	      if ((lchown (output_name.ds_string, uid, gid) < 0)
 		  && errno != EPERM)
-	        chown_error_details (output_name.ds_string, uid, gid);
-            }
+		chown_error_details (output_name.ds_string, uid, gid);
+	    }
+
+	  if (retain_time_flag)
+	    set_file_times (-1, output_name.ds_string,
+			    in_file_stat.st_atime, in_file_stat.st_mtime,
+			    AT_SYMLINK_NOFOLLOW);
 	  free (link_name);
 	}
 #endif
@@ -324,7 +325,7 @@ process_copy_pass ()
     fputc ('\n', stderr);
 
   apply_delayed_set_stat ();
-  
+
   if (!quiet_flag)
     {
       size_t blocks = (output_bytes + io_block_size - 1) / io_block_size;
@@ -333,9 +334,12 @@ process_copy_pass ()
 			 (unsigned long) blocks),
 	       (unsigned long) blocks);
     }
+
+  ds_free (&input_name);
+  ds_free (&output_name);
 }
 
-/* Try and create a hard link from FILE_NAME to another file 
+/* Try and create a hard link from FILE_NAME to another file
    with the given major/minor device number and inode.  If no other
    file with the same major/minor/inode numbers is known, add this file
    to the list of known files and associated major/minor/inode numbers
@@ -364,7 +368,7 @@ link_to_maj_min_ino (char *file_name, int st_dev_maj, int st_dev_min,
 }
 
 /* Try and create a hard link from LINK_NAME to LINK_TARGET.  If
-   `create_dir_flag' is set, any non-existent (parent) directories 
+   `create_dir_flag' is set, any non-existent (parent) directories
    needed by LINK_NAME will be created.  If the link is successfully
    created and `verbose_flag' is set, print "LINK_TARGET linked to LINK_NAME\n".
    If the link can not be created and `link_flag' is set, print

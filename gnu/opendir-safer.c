@@ -1,10 +1,10 @@
 /* Invoke opendir, but avoid some glitches.
 
-   Copyright (C) 2009-2017 Free Software Foundation, Inc.
+   Copyright (C) 2009-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
+   the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -13,7 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* Written by Eric Blake.  */
 
@@ -22,8 +22,8 @@
 #include "dirent-safer.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <unistd.h>
-#include "unistd-safer.h"
 
 /* Like opendir, but do not clobber stdin, stdout, or stderr.  */
 
@@ -49,7 +49,7 @@ opendir_safer (char const *name)
           DIR *newdp;
           int e;
 #if HAVE_FDOPENDIR || GNULIB_FDOPENDIR
-          int f = dup_safer (fd);
+          int f = fcntl (fd, F_DUPFD_CLOEXEC, STDERR_FILENO + 1);
           if (f < 0)
             {
               e = errno;
