@@ -1,6 +1,5 @@
 /* filemode.c -- make a string describing file modes
-   Copyright (C) 1985, 1990, 1993, 2004, 2007, 2010, 2014-2015, 2017
-   Free Software Foundation, Inc.
+   Copyright (C) 1985-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -241,4 +240,3 @@ filemodestring (struct stat *statp, char *str)
 {
   mode_string (statp->st_mode, str);
 }
-

@@ -1,18 +1,18 @@
 /* Start reading the entries of a directory.
-   Copyright (C) 2006-2017 Free Software Foundation, Inc.
+   Copyright (C) 2006-2024 Free Software Foundation, Inc.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation; either version 2.1 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   You should have received a copy of the GNU Lesser General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #include <config.h>
 
@@ -29,49 +29,65 @@
 
 #else
 
-# include <stdlib.h>
-
-# include "dirent-private.h"
 # include "filename.h"
 
+#endif
+
+#include <stdlib.h>
+#include <string.h>
+
+#if GNULIB_defined_DIR
+# include "dirent-private.h"
 #endif
 
 #if REPLACE_FCHDIR
 # include <unistd.h>
 #endif
 
-#ifdef __KLIBC__
-# include <io.h>
-# include <fcntl.h>
+#if defined _WIN32 && ! defined __CYGWIN__
+/* Don't assume that UNICODE is not defined.  */
+# undef WIN32_FIND_DATA
+# define WIN32_FIND_DATA WIN32_FIND_DATAA
+# undef GetFullPathName
+# define GetFullPathName GetFullPathNameA
+# undef FindFirstFile
+# define FindFirstFile FindFirstFileA
 #endif
 
 DIR *
 opendir (const char *dir_name)
+#undef opendir
 {
-#if HAVE_OPENDIR
-# undef opendir
+#if HAVE_DIRENT_H                       /* equivalent to HAVE_OPENDIR */
   DIR *dirp;
 
+# if GNULIB_defined_DIR
+#  undef DIR
+
+  dirp = (struct gl_directory *) malloc (sizeof (struct gl_directory));
+  if (dirp == NULL)
+    {
+      errno = ENOMEM;
+      return NULL;
+    }
+
+  DIR *real_dirp = opendir (dir_name);
+  if (real_dirp == NULL)
+    {
+      int saved_errno = errno;
+      free (dirp);
+      errno = saved_errno;
+      return NULL;
+    }
+
+  dirp->fd_to_close = -1;
+  dirp->real_dirp = real_dirp;
+# else
   dirp = opendir (dir_name);
   if (dirp == NULL)
     return NULL;
-
-# ifdef __KLIBC__
-  {
-    int fd = open (dir_name, O_RDONLY);
-    if (fd == -1 || _gl_register_dirp_fd (fd, dirp))
-      {
-        int saved_errno = errno;
-
-        close (fd);
-        closedir (dirp);
-
-        errno = saved_errno;
-
-        return NULL;
-      }
-  }
 # endif
+
 #else
 
   char dir_name_mask[MAX_PATH + 1 + 1 + 1];
@@ -144,6 +160,7 @@ opendir (const char *dir_name)
       errno = ENOMEM;
       return NULL;
     }
+  dirp->fd_to_close = -1;
   dirp->status = status;
   dirp->current = current;
   if (status == -1)

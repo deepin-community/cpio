@@ -9,12 +9,12 @@ Subject: fix other bugs
  src/main.c     |  2 ++
  4 files changed, 16 insertions(+), 2 deletions(-)
 
-diff --git a/lib/rtapelib.c b/lib/rtapelib.c
-index f6c4d5e..bd55e0c 100644
---- a/lib/rtapelib.c
-+++ b/lib/rtapelib.c
-@@ -426,7 +426,9 @@ rmt_open__ (const char *file_name, int open_mode, int bias,
-   }
+Index: cpio-2.14+dfsg/lib/rtapelib.c
+===================================================================
+--- cpio-2.14+dfsg.orig/lib/rtapelib.c
++++ cpio-2.14+dfsg/lib/rtapelib.c
+@@ -446,7 +446,9 @@ rmt_open__ (const char *file_name, int o
+   assume (remote_file);
  
    /* FIXME: Should somewhat validate the decoding, here.  */
 +#ifndef __WIN32__
@@ -23,11 +23,11 @@ index f6c4d5e..bd55e0c 100644
      error (EXIT_ON_EXEC_ERROR, 0, _("Cannot connect to %s: resolve failed"),
  	   remote_host);
  
-diff --git a/lib/sysdep.c b/lib/sysdep.c
-index e903032..803afdc 100644
---- a/lib/sysdep.c
-+++ b/lib/sysdep.c
-@@ -188,4 +188,12 @@ chown ( const char *filename __attribute__ ((unused)) ,  int owner __attribute__
+Index: cpio-2.14+dfsg/lib/sysdep.c
+===================================================================
+--- cpio-2.14+dfsg.orig/lib/sysdep.c
++++ cpio-2.14+dfsg/lib/sysdep.c
+@@ -187,4 +187,12 @@ chown ( const char *filename __attribute
    return -1;
  }
  #endif
@@ -41,11 +41,11 @@ index e903032..803afdc 100644
 +  return -1;
 +}
 +#endif
-diff --git a/lib/sysdep.h b/lib/sysdep.h
-index fd013ff..2709104 100644
---- a/lib/sysdep.h
-+++ b/lib/sysdep.h
-@@ -21,6 +21,8 @@
+Index: cpio-2.14+dfsg/lib/sysdep.h
+===================================================================
+--- cpio-2.14+dfsg.orig/lib/sysdep.h
++++ cpio-2.14+dfsg/lib/sysdep.h
+@@ -20,6 +20,8 @@
     You should have received a copy of the GNU General Public License
     along with GNU cpiio.  If not, see <http://www.gnu.org/licenses/>. */
  
@@ -54,18 +54,18 @@ index fd013ff..2709104 100644
  
  #ifdef HAVE_PROCESS_H
  # include <process.h>
-@@ -142,4 +144,4 @@ int link (const char *oldname,const char *newname);
+@@ -141,4 +143,4 @@ int link (const char *oldname,const char
  int chown (const char *filename,int owner,int group);
  #endif
  
 -
 +#endif
-diff --git a/src/main.c b/src/main.c
-index b1bc70a..7683500 100644
---- a/src/main.c
-+++ b/src/main.c
-@@ -777,6 +777,8 @@ main (int argc, char *argv[])
-   
+Index: cpio-2.14+dfsg/src/main.c
+===================================================================
+--- cpio-2.14+dfsg.orig/src/main.c
++++ cpio-2.14+dfsg/src/main.c
+@@ -786,6 +786,8 @@ main (int argc, char *argv[])
+ 
    initialize_buffers ();
  
 +  SET_BINARY_MODE (1);

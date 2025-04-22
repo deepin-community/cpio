@@ -1,6 +1,5 @@
 /* global.c - global variables and initial values for cpio.
-   Copyright (C) 1990-1992, 2001, 2006-2007, 2009-2010, 2014-2015, 2017
-   Free Software Foundation, Inc.
+   Copyright (C) 1990-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -114,7 +113,7 @@ int debug_flag = false;
 
 /* File position of last header read.  Only used during -A to determine
    where the old TRAILER!!! record started.  */
-int last_header_start = 0;
+off_t last_header_start = 0;
 
 /* With -i; if true, copy only files that match any of the given patterns;
    if false, copy only files that do not match any of the patterns. (-f) */
@@ -184,9 +183,6 @@ unsigned int warn_option = 0;
 /* Extract to standard output? */
 bool to_stdout_option = false;
 
-/* The name this program was run with.  */
-char *program_name;
-
 /* A pointer to either lstat or stat, depending on whether
    dereferencing of symlinks is done for input files.  */
 int (*xstat) ();
@@ -198,4 +194,4 @@ char *change_directory_option;
 
 int renumber_inodes_option;
 int ignore_devno_option;
-
+int ignore_dirnlink_option;

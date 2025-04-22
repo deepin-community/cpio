@@ -1,27 +1,26 @@
 /* Hierarchical argument parsing, layered over getopt
-   Copyright (C) 1995-2017 Free Software Foundation, Inc.
+   Copyright (C) 1995-2024 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Written by Miles Bader <miles@gnu.ai.mit.edu>.
 
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 3 of the License, or
-   (at your option) any later version.
+   This file is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as
+   published by the Free Software Foundation, either version 3 of the
+   License, or (at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
+   This file is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   You should have received a copy of the GNU Lesser General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
 
 #include <alloca.h>
-#include <stdalign.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -249,7 +248,7 @@ struct parser
   /* LONG_OPTS is the array of getop long option structures for the union of
      all the groups of options.  */
   struct option *long_opts;
-  /* OPT_DATA is the getopt data used for the re-entrant getopt.  */
+  /* OPT_DATA is the getopt data used for the reentrant getopt.  */
   struct _getopt_data opt_data;
 
   /* States of the various parsing groups.  */
@@ -356,9 +355,9 @@ convert_options (const struct argp *argp,
       group->args_processed = 0;
       group->parent = parent;
       group->parent_index = parent_index;
-      group->input = 0;
-      group->hook = 0;
-      group->child_inputs = 0;
+      group->input = NULL;
+      group->hook = NULL;
+      group->child_inputs = NULL;
 
       if (children)
         /* Assign GROUP's CHILD_INPUTS field some space from
@@ -374,7 +373,7 @@ convert_options (const struct argp *argp,
       parent = group++;
     }
   else
-    parent = 0;
+    parent = NULL;
 
   if (children)
     {
@@ -740,12 +739,15 @@ parser_parse_opt (struct parser *parser, int opt, char *val)
             }
     }
   else
-    /* A long option.  We use shifts instead of masking for extracting
-       the user value in order to preserve the sign.  */
-    err =
-      group_parse (&parser->groups[group_key - 1], &parser->state,
-                   (opt << GROUP_BITS) >> GROUP_BITS,
-                   parser->opt_data.optarg);
+    /* A long option.  Preserve the sign in the user key, without
+       invoking undefined behavior.  Assume two's complement.  */
+    {
+      int user_key =
+        ((opt & (1 << (USER_BITS - 1))) ? ~USER_MASK : 0) | (opt & USER_MASK);
+      err =
+        group_parse (&parser->groups[group_key - 1], &parser->state,
+                     user_key, parser->opt_data.optarg);
+    }
 
   if (err == EBADKEY)
     /* At least currently, an option not recognized is an error in the
@@ -910,7 +912,7 @@ __argp_parse (const struct argp *argp, int argc, char **argv, unsigned flags,
       (child++)->argp = &argp_default_argp;
       if (argp_program_version || argp_program_version_hook)
         (child++)->argp = &argp_version_argp;
-      child->argp = 0;
+      child->argp = NULL;
 
       argp = top_argp;
     }
@@ -947,7 +949,7 @@ __argp_input (const struct argp *argp, const struct argp_state *state)
           return group->input;
     }
 
-  return 0;
+  return NULL;
 }
 #ifdef weak_alias
 weak_alias (__argp_input, _argp_input)

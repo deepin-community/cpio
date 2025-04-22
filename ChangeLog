@@ -1,3 +1,352 @@
+2024-01-14  Sergey Poznyakoff  <gray@gnu.org>
+
+	Version 2.15
+
+	Upgrade gnulib
+
+	Upgrade copyright years
+
+2023-05-23  Sergey Poznyakoff  <gray@gnu.org>
+
+	Version 2.14.90
+
+2023-05-18  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix operation of --no-absolute-filenames --make-directories
+
+	* src/copyin.c (symlink_placeholder): Try to create leading
+	directories if unable to create placeholder.
+
+2023-05-18  Sergey Poznyakoff  <gray@gnu.org>
+
+	Upgrade paxutils
+
+2023-05-17  Sergey Poznyakoff  <gray@gnu.org>
+
+	Restore access and modification times of symlinks in copy-in
+	and copy-pass modes.
+
+	* gnulib.modules: Replace utimens with fdutimensat.
+	* paxutils: Upgrade.
+	* src/copyin.c: Update calls to set_file_times.
+	(copyin_link,replace_symlink_placeholders): Call set_file_times
+	if needed.
+	* src/copyout.c: Update calls to set_file_times.
+	* src/copypass.c (process_copy_pass): Update calls to
+	set_file_times.
+	Call set_file_times to restore times of extracted symlinks.
+	* src/extern.h (set_file_times): Take additional argument.
+	* src/util.c
+	(set_file_times): Take additional argument.  Use fdutimensat to
+	do the
+	job.
+	* tests/linktime.at: New file.
+	* tests/linktime01.at: New file.
+	* tests/Makefile.am: Add new files.
+	* tests/testsuite.at: Include new tests.
+
+2023-05-11  Sergey Poznyakoff  <gray@gnu.org>
+
+	configure: Include needed header for major/minor macros
+
+	This helps in avoiding the warning about implicit function
+	declaration
+	which is elevated as error with newer compilers e.g. clang 16
+
+2023-05-01  Sergey Poznyakoff  <gray@gnu.org>
+
+	Version 2.14
+
+2023-04-29  Sergey Poznyakoff  <gray@gnu.org>
+
+	Update NEWS
+
+2023-04-28  Paul Eggert  <eggert@cs.ucla.edu>
+
+	Use GNU ls algorithm for deciding timestamp format
+
+	Problem reported by Dan Jacobson (Bug#50694).
+
+	* gnulib.modules: Add gettime, timespec.
+	* src/copyin.c: Include timespec.h.
+	(current_time): Now struct timespec, not time_t.  All uses
+	changed.
+	(long_format): When formatting a timestamp, use the same
+	algorithm that
+	GNU ls does to decide whether a file is recent.
+
+2023-04-28  Paul Eggert  <eggert@cs.ucla.edu>
+
+	Fix integer overflows in timestamp output
+
+	* src/copyin.c (long_format): Fix some unlikely integer overflow
+	bugs.
+	Work even if (current_time - when) overflows, which is
+	possible if time_t is unsigned.
+	Do not assume that system integer types fit into unsigned long.
+	Simplify by using %ju.	No need for local tbuf array.
+
+2023-04-28  Sergey Poznyakoff  <gray@gnu.org>
+
+	Whitespace cleanup
+
+	Update version of gnulib
+
+2023-04-28  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix appending to archives bigger than 2G
+
+	* src/extern.h (last_header_start): Change type to off_t.
+	* src/global.c: Likewise.
+	* src/util.c (prepare_append): Use off_t for file offsets.
+
+2023-04-28  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix combination of --create, --append, --directory
+
+	In copy-out mode, when appending, change_dir() would be called
+	twice,
+	because process_copy_in() calls change_dir().  If --directory=DIR
+	was
+	used with a relative path, this would result in incorrectly
+	trying to
+	change to DIR/DIR.  To fix this, change_dir() is only called
+	explicitly when not appending.
+
+	Patch by Alyssa Ross <hi@alyssa.is>
+
+	* src/copyout.c (process_copy_out): Don't call change_dir if
+	append_flag is set: it is going to be called by process_copy_in.
+
+2023-04-28  Sergey Poznyakoff  <gray@gnu.org>
+
+	New option --ignore-dirnlink
+
+	Thus option is valid in copy-out mode.	It instructs cpio
+	to always
+	assume link count for directories to be 2.  It is implied by
+	--reproducible.
+
+	* NEWS: Document changes.
+	* doc/cpio.1: Likewise.
+	* doc/cpio.texi: Likewise.
+	* src/copyout.c (process_copy_out): If ignore_dirnlink_option
+	is set,
+	assume c_nlink is 2.
+	* src/extern.h (ignore_dirnlink_option): New extern.
+	* src/global.c (ignore_dirnlink_option): New global.
+	* src/main.c: New option --ignore-dirnlink.
+	The option --reproducible implies --ignore-dirnlink.
+
+2023-04-28  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix 45b0ee2b407913c533f7ded8d6f8cbeec16ff6ca.
+
+	The commit in question brought in more problems than solutions.
+	To
+	properly fix the issue, use symlink placeholders, modelled after
+	delayed symlinks in tar.
+
+	* src/copyin.c (symlink_placeholder)
+	(replace_symlink_placeholders): New functions.
+	(copyin_link): Create symlink placeholder if
+	--no-absolute-filenames
+	was given.
+	(process_copy_in): Replace placeholders after extraction.
+	* tests/CVE-2015-1197.at: Update. Don't use /tmp.
+
+2023-04-27  Sergey Poznyakoff  <gray@gnu.org>
+
+	Require automake 1.16.5
+
+2023-04-27  Sergey Poznyakoff  <gray@gnu.org>
+
+	Update for newer autotools
+
+	* am/pack.m4: Don't use obsolete macros.
+	* configure.ac: Likewise.
+	Require autoconf 2.71
+	* paxutils: Upgrade.
+	* src/extern.h (STRINGIFY_BIGINT, UINTMAX_STRSIZE_BOUND):
+	New definitions.
+	(parse_user_spec): Change signature.
+	* src/main.c: Update call to parse_user_spec.
+	* src/idcache.c: Include extern.h
+	* src/userspec.c: Likewise.
+
+2023-04-07  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix calculation of CRC in copy-out mode.
+
+	* src/copyout.c (read_for_checksum): Fix type of the file_size
+	argument.
+	Rewrite the reading loop.
+
+	Original patch by Stefano Babic <sbabic@denx.de>
+
+2023-01-22  Sergey Poznyakoff  <gray@gnu.org>
+
+	Upgrade gnulib
+
+	Update copyright years
+
+2022-02-13  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix wording in the manpage
+
+2022-01-02  Sergey Poznyakoff  <gray@gnu.org>
+
+	Update copyright years
+
+2021-09-03  Shreenidhi Shedi  <sshedi@vmware.com>
+
+	Remove redundant condition check
+
+	* src/util.c (tape_empty_output_buffer): Fix condition.
+
+2021-09-03  Sergey Poznyakoff  <gray@gnu.org>
+
+	Use inttostr to represent integer values as strings
+
+	* gnulib.modules: Request inttostr
+	* src/idcache.c (getuser,getgroup): Use umaxtostr instead
+	of sprintf.
+	* src/userspec.c (parse_user_spec): Likewise.
+
+2021-08-18  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix dynamic string reallocations
+
+	* src/dstring.c (ds_resize): Take additional argument: number of
+	bytes to leave available after ds_idx.	All uses changed.
+
+2021-08-11  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix previous commit
+
+	* src/dstring.c (ds_reset,ds_concat): Don't call ds_resize in a
+	loop.
+
+2021-08-07  Sergey Poznyakoff  <gray@gnu.org>
+
+	Rewrite dynamic string support.
+
+	* src/dstring.c (ds_init): Take a single argument.
+	(ds_free): New function.
+	(ds_resize): Take a single argument.  Use x2nrealloc to expand
+	the storage.
+	(ds_reset,ds_append,ds_concat,ds_endswith): New function.
+	(ds_fgetstr): Rewrite.	In particular, this fixes integer
+	overflow.
+	* src/dstring.h (dynamic_string): Keep both the allocated length
+	(ds_size) and index of the next free byte in the string (ds_idx).
+	(ds_init,ds_resize): Change signature.
+	(ds_len): New macro.
+	(ds_free,ds_reset,ds_append,ds_concat,ds_endswith): New protos.
+	* src/copyin.c: Use new ds_ functions.
+	* src/copyout.c: Likewise.
+	* src/copypass.c: Likewise.
+	* src/util.c: Likewise.
+
+2021-03-24  Sergey Poznyakoff  <gray@gnu.org>
+
+	Improve online version of the documentation.
+
+2021-01-08  Sergey Poznyakoff  <gray@gnu.org>
+
+	Update gnulib
+
+	* NEWS: Raise version number.
+	* configure.ac: Raise version number to 2.13.90.
+	Raise autoconf and automake requirements.
+	* gnulib: Pull v0.1-4336-gbdae9a5
+	* gnulib.modules: Remove getopt
+	* src/copyin.c (long_format): Cast rdev numbers to unsigned long
+
+2021-01-06  Sergey Poznyakoff  <gray@gnu.org>
+
+	Update copyright years
+
+2020-09-18  Sergey Poznyakoff  <gray@gnu.org>
+
+	Formatting changes in the documentation.
+
+	* doc/cpio.1: Fix typos.
+	* doc/cpio.texi: Consistently use proper Texinfo markup fo
+	commands,
+	files, and sample text fragments.
+
+2020-02-08  Sergey Poznyakoff  <gray@gnu.org>
+
+	Update copyright years
+
+2020-01-20  Sergey Poznyakoff  <gray@gnu.org>
+
+	Minor fix * src/global.c: Remove superfluous declaration of
+	program_name
+
+2019-11-16  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix handling of device numbers (part 2)
+
+	Previously the members of cpio_file_stat that hold device
+	major and
+	minor numbers were signed (long).  This caused issues when
+	the device
+	number was cast to unsigned value (uintmax_t) during a call to
+	to_ascii or derived function.  In particular, on *BSD systems
+	minor
+	numbers are negative ints.  When such numbers are passed to
+	to_ascii,
+	the resulting unsigned representation does not fit into the target
+	field width.  For details, see
+
+	  https://lists.gnu.org/archive/html/bug-cpio/2019-11/msg00012.html
+
+	To fix this, the return types are autodetected by configure.
+	The types
+	of the c_dev_maj, c_dev_min, c_rdev_maj, and c_rdev_min members of
+	struct cpio_file_stat are changed to unsigned versions of the
+	corresponding detected types.  This ensures that the value
+	returned from
+	major (or minor) will not undergo sign extension during assignment
+	to the
+	struct member and can be correctly promoted to a wider unsigned
+	data
+	type.
+
+	* am/ax_compile_check_rettype.m4: New macro
+	AC_COMPILE_CHECK_RETTYPE
+	* configure.ac: Detect return types of major(3) and minor(3).
+	* src/cpiohdr.h (cpio_file_stat): Change types of c_dev_maj,
+	c_dev_min,
+	c_rdev_maj, c_rdev_min.
+
+2019-11-14  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix handling of device numbers on copy out.
+
+	Device minor and major numbers are meaningful only for devices.
+	Don't attempt to store them for other files.  Instead fill the
+	corresponding fields with zeros.
+
+	* src/util.c (stat_to_cpio): Initialize c_rdev_maj  and c_rdev_min
+	from struct stat only if the file is a device, otherwise set them
+	to zero.
+
+2019-11-08  Sergey Poznyakoff  <gray@gnu.org>
+
+	Improve 684b7ac5
+
+	* src/copyin.c (read_name_from_file): Handle len == 0.
+
+2019-11-08  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix cpio header verification.
+
+	* src/copyin.c (read_name_from_file): Print error message and
+	skip file if its name is not nul-terminated.
+
 2019-11-06  Sergey Poznyakoff  <gray@gnu.org>
 
 	Version 2.13

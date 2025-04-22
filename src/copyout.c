@@ -1,6 +1,5 @@
 /* copyout.c - create a cpio archive
-   Copyright (C) 1990-1992, 2001, 2003-2004, 2006-2007, 2009-2010,
-   2014-2015, 2017 Free Software Foundation, Inc.
+   Copyright (C) 1990-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -34,27 +33,25 @@
    compute and return a checksum for them.  */
 
 static uint32_t
-read_for_checksum (int in_file_des, int file_size, char *file_name)
+read_for_checksum (int in_file_des, off_t file_size, char *file_name)
 {
   uint32_t crc;
-  char buf[BUFSIZ];
-  int bytes_left;
-  int bytes_read;
-  int i;
+  unsigned char buf[BUFSIZ];
+  ssize_t bytes_read;
+  ssize_t i;
 
   crc = 0;
 
-  for (bytes_left = file_size; bytes_left > 0; bytes_left -= bytes_read)
+  while (file_size > 0)
     {
       bytes_read = read (in_file_des, buf, BUFSIZ);
       if (bytes_read < 0)
 	error (PAXEXIT_FAILURE, errno, _("cannot read checksum for %s"), file_name);
       if (bytes_read == 0)
 	break;
-      if (bytes_left < bytes_read)
-        bytes_read = bytes_left;
-      for (i = 0; i < bytes_read; ++i)
+      for (i = 0; i < bytes_read; i++)
 	crc += buf[i] & 0xff;
+      file_size -= bytes_read;
     }
   if (lseek (in_file_des, 0L, SEEK_SET))
     error (PAXEXIT_FAILURE, errno, _("cannot read checksum for %s"), file_name);
@@ -68,8 +65,8 @@ read_for_checksum (int in_file_des, int file_size, char *file_name)
 static void
 tape_clear_rest_of_block (int out_file_des)
 {
-  write_nuls_to_file (io_block_size - output_size, out_file_des, 
-                      tape_buffered_write);
+  write_nuls_to_file (io_block_size - output_size, out_file_des,
+		      tape_buffered_write);
 }
 
 /* Write NULs on OUT_FILE_DES to move from OFFSET (the current location)
@@ -111,7 +108,7 @@ count_defered_links_to_dev_ino (struct cpio_file_stat *file_hdr)
 {
   struct deferment *d;
   ino_t	ino = file_hdr->c_ino;
-  long 	maj = file_hdr->c_dev_maj;
+  long	maj = file_hdr->c_dev_maj;
   long  min = file_hdr->c_dev_min;
   size_t count = 0;
 
@@ -158,7 +155,7 @@ writeout_other_defers (struct cpio_file_stat *file_hdr, int out_des)
   struct deferment *d;
   struct deferment *d_prev;
   ino_t	ino;
-  int 	maj;
+  int	maj;
   int   min;
   ino = file_hdr->c_ino;
   maj = file_hdr->c_dev_maj;
@@ -230,7 +227,7 @@ writeout_defered_file (struct cpio_file_stat *header, int out_file_des)
 
   if (reset_time_flag)
     set_file_times (in_file_des, file_hdr.c_name, file_hdr.c_mtime,
-		    file_hdr.c_mtime);
+		    file_hdr.c_mtime, 0);
   if (close (in_file_des) < 0)
     close_error (header->c_name);
 }
@@ -238,7 +235,7 @@ writeout_defered_file (struct cpio_file_stat *header, int out_file_des)
 /* When writing newc and crc format archives we defer multiply linked
    files until we have seen all of the links to the file.  If a file
    has links to it that aren't going into the archive, then we will
-   never see the "last" link to the file, so at the end we just write 
+   never see the "last" link to the file, so at the end we just write
    all of the leftover defered files into the archive.  */
 
 static void
@@ -311,7 +308,7 @@ to_ascii_or_warn (char *where, uintmax_t n, size_t digits,
 {
   if (to_ascii (where, n, digits, logbase, false))
     field_width_warning (filename, fieldname);
-}    
+}
 
 int
 to_ascii_or_error (char *where, uintmax_t n, size_t digits,
@@ -324,7 +321,7 @@ to_ascii_or_error (char *where, uintmax_t n, size_t digits,
       return 1;
     }
   return 0;
-}    
+}
 
 
 int
@@ -385,7 +382,7 @@ write_out_new_ascii_header (const char *magic_string,
   tape_buffered_write (file_hdr->c_name, out_des, (long) file_hdr->c_namesize);
   tape_pad_output (out_des, file_hdr->c_namesize + sizeof ascii_header);
   return 0;
-}  
+}
 
 int
 write_out_old_ascii_header (dev_t dev, dev_t rdev,
@@ -393,7 +390,7 @@ write_out_old_ascii_header (dev_t dev, dev_t rdev,
 {
   char ascii_header[76];
   char *p = ascii_header;
-  
+
   to_ascii (p, file_hdr->c_magic, 6, LG_8, false);
   p += 6;
   to_ascii_or_warn (p, dev, 6, LG_8, file_hdr->c_name, _("device number"));
@@ -474,23 +471,23 @@ write_out_binary_header (dev_t rdev,
   short_hdr.c_ino = file_hdr->c_ino & 0xFFFF;
   if (short_hdr.c_ino != file_hdr->c_ino)
     field_width_warning (file_hdr->c_name, _("inode number"));
-  
+
   short_hdr.c_mode = file_hdr->c_mode & 0xFFFF;
   if (short_hdr.c_mode != file_hdr->c_mode)
     field_width_warning (file_hdr->c_name, _("file mode"));
-  
+
   short_hdr.c_uid = file_hdr->c_uid & 0xFFFF;
   if (short_hdr.c_uid != file_hdr->c_uid)
     field_width_warning (file_hdr->c_name, _("uid"));
-  
+
   short_hdr.c_gid = file_hdr->c_gid & 0xFFFF;
   if (short_hdr.c_gid != file_hdr->c_gid)
     field_width_warning (file_hdr->c_name, _("gid"));
-  
+
   short_hdr.c_nlink = file_hdr->c_nlink & 0xFFFF;
   if (short_hdr.c_nlink != file_hdr->c_nlink)
     field_width_warning (file_hdr->c_name, _("number of links"));
-		      
+
   short_hdr.c_rdev = rdev;
   short_hdr.c_mtimes[0] = file_hdr->c_mtime >> 16;
   short_hdr.c_mtimes[1] = file_hdr->c_mtime & 0xFFFF;
@@ -504,7 +501,7 @@ write_out_binary_header (dev_t rdev,
 	     STRINGIFY_BIGINT (file_hdr->c_namesize, maxbuf), 0xFFFFu);
       return 1;
     }
-		      
+
   short_hdr.c_filesizes[0] = file_hdr->c_filesize >> 16;
   short_hdr.c_filesizes[1] = file_hdr->c_filesize & 0xFFFF;
 
@@ -517,7 +514,7 @@ write_out_binary_header (dev_t rdev,
 	     STRINGIFY_BIGINT (file_hdr->c_namesize, maxbuf), 0xFFFFFFFFlu);
       return 1;
     }
-		      
+
   /* Output the file header.  */
   tape_buffered_write ((char *) &short_hdr, out_des, 26);
 
@@ -532,31 +529,31 @@ write_out_binary_header (dev_t rdev,
 /* Write out header FILE_HDR, including the file name, to file
    descriptor OUT_DES.  */
 
-int 
+int
 write_out_header (struct cpio_file_stat *file_hdr, int out_des)
 {
   dev_t dev;
   dev_t rdev;
-  
+
   switch (archive_format)
     {
     case arf_newascii:
       return write_out_new_ascii_header ("070701", file_hdr, out_des);
-      
+
     case arf_crcascii:
       return write_out_new_ascii_header ("070702", file_hdr, out_des);
-      
+
     case arf_oldascii:
       return write_out_old_ascii_header (makedev (file_hdr->c_dev_maj,
 						  file_hdr->c_dev_min),
 					 makedev (file_hdr->c_rdev_maj,
 						  file_hdr->c_rdev_min),
 					 file_hdr, out_des);
-      
+
     case arf_hpoldascii:
       hp_compute_dev (file_hdr, &dev, &rdev);
       return write_out_old_ascii_header (dev, rdev, file_hdr, out_des);
-      
+
     case arf_tar:
     case arf_ustar:
       if (is_tar_filename_too_long (file_hdr->c_name))
@@ -594,18 +591,18 @@ assign_string (char **pvar, char *value)
    The format of the header depends on the compatibility (-c) flag.  */
 
 void
-process_copy_out ()
+process_copy_out (void)
 {
-  dynamic_string input_name;	/* Name of file read from stdin.  */
+  dynamic_string input_name = DYNAMIC_STRING_INITIALIZER;
+				/* Name of file read from stdin.  */
   struct stat file_stat;	/* Stat record for file.  */
   struct cpio_file_stat file_hdr = CPIO_FILE_STAT_INITIALIZER;
-                                /* Output header information.  */
+				/* Output header information.  */
   int in_file_des;		/* Source file descriptor.  */
   int out_file_des;		/* Output file descriptor.  */
   char *orig_file_name = NULL;
 
   /* Initialize the copy out.  */
-  ds_init (&input_name, 128);
   file_hdr.c_magic = 070707;
 
   /* Check whether the output file might be a tape.  */
@@ -627,13 +624,13 @@ process_copy_out ()
       output_is_seekable = S_ISREG (file_stat.st_mode);
     }
 
-  change_dir ();
-  
   if (append_flag)
     {
       process_copy_in ();
       prepare_append (out_file_des);
     }
+  else
+    change_dir ();
 
   /* Copy files with names read from stdin.  */
   while (ds_fgetstr (stdin, &input_name, name_end) != NULL)
@@ -652,22 +649,17 @@ process_copy_out ()
 	{
 	  /* Set values in output header.  */
 	  stat_to_cpio (&file_hdr, &file_stat);
-	  
+
 	  if (archive_format == arf_tar || archive_format == arf_ustar)
 	    {
 	      if (file_hdr.c_mode & CP_IFDIR)
 		{
-		  int len = strlen (input_name.ds_string);
 		  /* Make sure the name ends with a slash */
-		  if (input_name.ds_string[len-1] != '/')
-		    {
-		      ds_resize (&input_name, len + 2);
-		      input_name.ds_string[len] = '/';
-		      input_name.ds_string[len+1] = 0;
-		    }
+		  if (!ds_endswith (&input_name, '/'))
+		    ds_append (&input_name, '/');
 		}
 	    }
-	  
+
 	  assign_string (&orig_file_name, input_name.ds_string);
 	  cpio_safer_name_suffix (input_name.ds_string, false,
 				  !no_abs_paths_flag, true);
@@ -722,7 +714,7 @@ process_copy_out ()
 				       out_file_des, file_hdr.c_filesize,
 				       orig_file_name);
 	      warn_if_file_changed(orig_file_name, file_hdr.c_filesize,
-                                   file_hdr.c_mtime);
+				   file_hdr.c_mtime);
 
 	      if (archive_format == arf_tar || archive_format == arf_ustar)
 		add_inode (file_hdr.c_ino, orig_file_name, file_hdr.c_dev_maj,
@@ -731,15 +723,17 @@ process_copy_out ()
 	      tape_pad_output (out_file_des, file_hdr.c_filesize);
 
 	      if (reset_time_flag)
-                set_file_times (in_file_des,
+		set_file_times (in_file_des,
 				orig_file_name,
-                                file_stat.st_atime, file_stat.st_mtime);
+				file_stat.st_atime, file_stat.st_mtime, 0);
 	      if (close (in_file_des) < 0)
 		close_error (orig_file_name);
 	      break;
 
 	    case CP_IFDIR:
 	      file_hdr.c_filesize = 0;
+	      if (ignore_dirnlink_option)
+		file_hdr.c_nlink = 2;
 	      if (write_out_header (&file_hdr, out_file_des))
 		continue;
 	      break;
@@ -765,8 +759,8 @@ process_copy_out ()
 						    file_hdr.c_dev_maj,
 						    file_hdr.c_dev_min)))
 		    {
-		      /* This file is linked to another file already in the 
-		         archive, so write it out as a hard link. */
+		      /* This file is linked to another file already in the
+			 archive, so write it out as a hard link. */
 		      file_hdr.c_mode = (file_stat.st_mode & 07777);
 		      file_hdr.c_mode |= CP_IFREG;
 		      file_hdr.c_tar_linkname = otherfile;
@@ -774,7 +768,7 @@ process_copy_out ()
 			continue;
 		      break;
 		    }
-		  add_inode (file_hdr.c_ino, orig_file_name, 
+		  add_inode (file_hdr.c_ino, orig_file_name,
 			     file_hdr.c_dev_maj, file_hdr.c_dev_min);
 		}
 	      file_hdr.c_filesize = 0;
@@ -789,7 +783,7 @@ process_copy_out ()
 		int link_size;
 
 		link_size = readlink (orig_file_name, link_name,
-			              file_stat.st_size);
+				      file_stat.st_size);
 		if (link_size < 0)
 		  {
 		    readlink_warn (orig_file_name);
@@ -831,7 +825,7 @@ process_copy_out ()
 	    default:
 	      error (0, 0, _("%s: unknown file type"), orig_file_name);
 	    }
-	  
+
 	  if (verbose_flag)
 	    fprintf (stderr, "%s\n", orig_file_name);
 	  if (dot_flag)
@@ -840,7 +834,7 @@ process_copy_out ()
     }
 
   free (orig_file_name);
-  
+
   writeout_final_defers(out_file_des);
   /* The collection is complete; append the trailer.  */
   file_hdr.c_ino = 0;
@@ -875,6 +869,5 @@ process_copy_out ()
 			 (unsigned long) blocks), (unsigned long) blocks);
     }
   cpio_file_stat_free (&file_hdr);
+  ds_free (&input_name);
 }
-
-

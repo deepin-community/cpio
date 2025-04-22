@@ -1,6 +1,5 @@
 /* userspec.c -- Parse a user and group string.
-   Copyright (C) 1989-1992, 2001, 2004-2005, 2007, 2010, 2014-2015, 2017
-   Free Software Foundation, Inc.
+   Copyright (C) 1989-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -24,6 +23,8 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <sys/types.h>
+#include "cpiohdr.h"
+#include "extern.h"
 
 #ifndef HAVE_ENDPWENT
 # define endpwent()
@@ -136,17 +137,13 @@ parse_user_spec (const char *spec_arg, uid_t *uid, gid_t *gid,
 	  if (g == NULL && separator != NULL)
 	    {
 	      /* A separator was given, but a group was not specified,
-	         so get the login group.  */
+		 so get the login group.  */
 	      *gid = pwd->pw_gid;
 	      grp = getgrgid (pwd->pw_gid);
 	      if (grp == NULL)
 		{
-		  /* This is enough room to hold the unsigned decimal
-		     representation of any 32-bit quantity and the trailing
-		     zero byte.  */
-		  char uint_buf[21];
-		  sprintf (uint_buf, "%u", (unsigned) (pwd->pw_gid));
-		  V_STRDUP (groupname, uint_buf);
+		  char nbuf[UINTMAX_STRSIZE_BOUND];
+		  V_STRDUP (groupname, umaxtostr (pwd->pw_gid, nbuf));
 		}
 	      else
 		{

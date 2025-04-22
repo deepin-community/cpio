@@ -1,6 +1,5 @@
 /* Extended cpio header from POSIX.1.
-   Copyright (C) 1992, 2006-2007, 2010, 2014-2015, 2017 Free Software
-   Foundation, Inc.
+   Copyright (C) 1992-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -119,10 +118,10 @@ struct cpio_file_stat /* Internal representation of a CPIO header */
   size_t c_nlink;
   time_t c_mtime;
   off_t c_filesize;
-  long c_dev_maj;
-  long c_dev_min;
-  long c_rdev_maj;
-  long c_rdev_min;
+  unsigned RETTYPE_MAJOR c_dev_maj;
+  unsigned RETTYPE_MINOR c_dev_min;
+  unsigned RETTYPE_MAJOR c_rdev_maj;
+  unsigned RETTYPE_MINOR c_rdev_min;
   size_t c_namesize;
   uint32_t c_chksum;
   char *c_name;

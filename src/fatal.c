@@ -1,6 +1,5 @@
 /* This file is part of GNU cpio.
-   Copyright (C) 2005, 2007, 2010, 2014-2015, 2017 Free Software
-   Foundation, Inc.
+   Copyright (C) 2005-2024 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,4 +24,3 @@ fatal_exit ()
 {
   exit (PAXEXIT_FAILURE);
 }
-

@@ -9,11 +9,11 @@ support it.
  doc/mt.1 | 4 +++-
  1 file changed, 3 insertions(+), 1 deletion(-)
 
-diff --git a/doc/mt.1 b/doc/mt.1
-index 55516a8..383d688 100644
---- a/doc/mt.1
-+++ b/doc/mt.1
-@@ -122,7 +122,9 @@ Rewind the tape, then wind it to the end of the reel,
+Index: cpio-2.14+dfsg/doc/mt.1
+===================================================================
+--- cpio-2.14+dfsg.orig/doc/mt.1
++++ cpio-2.14+dfsg/doc/mt.1
+@@ -122,7 +122,9 @@ Rewind the tape, then wind it to the end
  then rewind it again.
  .TP 
  .B erase

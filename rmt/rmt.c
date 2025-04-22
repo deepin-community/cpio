@@ -1,5 +1,5 @@
 /* This file is part of GNU Paxutils.
-   Copyright (C) 2009 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2023 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@
 #include <getopt.h>
 #include <full-write.h>
 #include <configmake.h>
-#include <inttostr.h>
 #include <error.h>
 #include <progname.h>
 #include <c-ctype.h>
@@ -51,13 +50,16 @@ FILE *dbgout;
     }									\
   while (0)
 
-#define VDEBUG(lev, pfx, fmt, ap)		\
+#define VDEBUG(lev, pfx, fmt)		        \
   do						\
     {						\
       if (dbgout && (lev) <= dbglev)		\
 	{					\
+          va_list aptr;                         \
+          va_start (aptr, fmt);                 \
 	  fprintf (dbgout, "%s", pfx);		\
-	  vfprintf (dbgout, fmt, ap);		\
+	  vfprintf (dbgout, fmt, aptr);		\
+          va_end (aptr);                        \
 	}					\
     }						\
   while (0)
@@ -100,15 +102,15 @@ rmt_write (const char *fmt, ...)
   va_list ap;
   va_start (ap, fmt);
   vfprintf (stdout, fmt, ap);
+  va_end (ap);
   fflush (stdout);
-  VDEBUG (10, "S: ", fmt, ap);
+  VDEBUG (10, "S: ", fmt);
 }
 
 static void
 rmt_reply (uintmax_t code)
 {
-  char buf[UINTMAX_STRSIZE_BOUND];
-  rmt_write ("A%s\n", umaxtostr (code, buf));
+  rmt_write ("A%ju\n", code);
 }
 
 static void
@@ -243,7 +245,7 @@ decode_open_flag (const char *mstr, int *pmode)
       while (mstr)
 	{
 	  int v;
-	  
+
 	  mstr = skip_ws (mstr);
 	  if (*mstr == 0)
 	    break;
@@ -256,7 +258,7 @@ decode_open_flag (const char *mstr, int *pmode)
 	    }
 
 	  mode |= v;
-	  
+
 	  if (*p && c_isblank (*p))
 	    p = skip_ws (p);
 	  if (*p == 0)
@@ -306,7 +308,7 @@ decode_open_flag (const char *mstr, int *pmode)
    In addition, a compined form is also allowed, i.e. a decimal mode followed
    by its symbolic representation.  In this case the symbolic representation
    is given preference.
-      
+
    Reply
    -----
    A0\n on success, E0\n<msg>\n on error.

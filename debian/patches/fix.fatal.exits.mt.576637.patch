@@ -8,11 +8,11 @@ Subject: Return MT_EXIT_FAILURE instead of MT_EXIT_INVOP for fatal exits from
  src/mt.c        | 2 ++
  2 files changed, 4 insertions(+)
 
-diff --git a/src/Makefile.am b/src/Makefile.am
-index ab3fc1a..6430587 100644
---- a/src/Makefile.am
-+++ b/src/Makefile.am
-@@ -42,6 +42,8 @@ cpio_SOURCES = \
+Index: cpio-2.14+dfsg/src/Makefile.am
+===================================================================
+--- cpio-2.14+dfsg.orig/src/Makefile.am
++++ cpio-2.14+dfsg/src/Makefile.am
+@@ -41,6 +41,8 @@ cpio_SOURCES = \
   makepath.c\
   userspec.c
  
@@ -21,11 +21,11 @@ index ab3fc1a..6430587 100644
  noinst_HEADERS =\
   cpio.h\
   cpiohdr.h\
-diff --git a/src/mt.c b/src/mt.c
-index 7022738..1cc23b1 100644
---- a/src/mt.c
-+++ b/src/mt.c
-@@ -55,6 +55,8 @@
+Index: cpio-2.14+dfsg/src/mt.c
+===================================================================
+--- cpio-2.14+dfsg.orig/src/mt.c
++++ cpio-2.14+dfsg/src/mt.c
+@@ -54,6 +54,8 @@
  
     David MacKenzie <djm@gnu.ai.mit.edu> */
  
