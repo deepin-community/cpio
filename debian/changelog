@@ -1,3 +1,19 @@
+cpio (2.15+dfsg-2deepin1) unstable; urgency=medium
+
+  * fix(cve): CVE-2026-66486 (medium) - Quote file names in error
+    messages and in listings.   Upstream:
+    https://git.savannah.gnu.org/cgit/cpio.git/commit/?id=2ff9600c9ef32e
+    88759843cdbde74c8db5ae9b30
+  * fix(cve): CVE-2026-66484 (medium) - The --no-absolute-filenames
+    option affects hard link targets too.   Upstream:
+    https://git.savannah.gnu.org/cgit/cpio.git/commit/?id=e2b9cbdd3354d2
+    b1569b7390d1bc15c1930559ad
+  * fix(cve): CVE-2026-66485 (medium) - Minor fixes   Upstream:
+    https://git.savannah.gnu.org/cgit/cpio.git/commit/?id=3cd514031371d8
+    aeeaf2048aa10103e02831aaa9
+
+ -- deepin-ci-robot <packages@deepin.org>  Fri, 20 Nov 2026 00:40:24 +0800
+
 cpio (2.15+dfsg-2) unstable; urgency=medium
 
   [ Miriam España Acebal <miriam.espana@canonical.com> ]
