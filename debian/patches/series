@@ -7,3 +7,4 @@ fix.other.bugs.patch
 695717-no-cpio.info.patch
 fix.mt-erase.manpage.patch
 CVE-2026-66486.patch
+CVE-2026-66484.patch
