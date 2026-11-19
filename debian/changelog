@@ -8,6 +8,9 @@ cpio (2.15+dfsg-2deepin1) unstable; urgency=medium
     option affects hard link targets too.   Upstream:
     https://git.savannah.gnu.org/cgit/cpio.git/commit/?id=e2b9cbdd3354d2
     b1569b7390d1bc15c1930559ad
+  * fix(cve): CVE-2026-66485 (medium) - Minor fixes   Upstream:
+    https://git.savannah.gnu.org/cgit/cpio.git/commit/?id=3cd514031371d8
+    aeeaf2048aa10103e02831aaa9
 
  -- deepin-ci-robot <packages@deepin.org>  Fri, 20 Nov 2026 00:40:24 +0800
 

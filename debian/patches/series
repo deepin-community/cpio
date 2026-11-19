@@ -8,3 +8,4 @@ fix.other.bugs.patch
 fix.mt-erase.manpage.patch
 CVE-2026-66486.patch
 CVE-2026-66484.patch
+CVE-2026-66485.patch
