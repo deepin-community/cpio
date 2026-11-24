@@ -8,6 +8,12 @@ cpio (2.15+dfsg-2deepin1) unstable; urgency=medium
     option affects hard link targets too.   Upstream:
     https://git.savannah.gnu.org/cgit/cpio.git/commit/?id=e2b9cbdd3354d2
     b1569b7390d1bc15c1930559ad
+  * fix(cve): CVE-2026-66484 - Port upstream follow-up b19a03e4 so that
+    --no-absolute-filenames keeps tar/ustar symbolic link targets
+    intact and only rewrites hard link targets; add the
+    tests/symlink-tar-abs.at regression test.   Upstream:
+    https://git.savannah.gnu.org/cgit/cpio.git/commit/?id=b19a03e4c07528
+    84c40a3fb58f61d61de8d5ab9e
   * fix(cve): CVE-2026-66485 (medium) - Minor fixes   Upstream:
     https://git.savannah.gnu.org/cgit/cpio.git/commit/?id=3cd514031371d8
     aeeaf2048aa10103e02831aaa9
